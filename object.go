@@ -10,6 +10,14 @@ type Object[T pixel.Color] interface {
 	// the construction of a container object.
 	SetParent(object Object[T])
 
+	// Request an update to this object (that doesn't change the layout).
+	RequestUpdate()
+	RequestChildUpdate()
+
+	// Request a re-layout of this object.
+	RequestLayout()
+	RequestChildLayout()
+
 	// Layout the object in the provided area. The object will take up all the
 	// given area (if needed, by filling in the rest with its background color).
 	Layout(x, y, width, height int)
@@ -29,7 +37,10 @@ type Object[T pixel.Color] interface {
 type objectFlag uint8
 
 const (
-	flagNeedsUpdate objectFlag = iota + 1 // whether the element needs to have a full redraw
+	flagNeedsUpdate      objectFlag = 1 << iota // whether the element needs to have a full redraw
+	flagNeedsChildUpdate                        // one of the children needs an update (but not necessarily the object itself)
+	flagNeedsLayout                             // this object needs a re-layout
+	flagNeedsChildLayout                        // one of the children of this object needs a re-layout
 )
 
 type Rect[T pixel.Color] struct {
@@ -64,17 +75,46 @@ func (r *Rect[T]) SetParent(parent Object[T]) {
 	r.parent = parent
 }
 
+func (r *Rect[T]) RequestUpdate() {
+	r.flags |= flagNeedsUpdate
+	if r.parent != nil {
+		r.parent.RequestChildUpdate()
+	}
+}
+
+func (r *Rect[T]) RequestChildUpdate() {
+	r.flags |= flagNeedsChildUpdate
+	if r.parent != nil {
+		r.parent.RequestChildUpdate()
+	}
+}
+
+func (r *Rect[T]) RequestLayout() {
+	r.flags |= flagNeedsLayout
+	if r.parent != nil {
+		r.parent.RequestChildLayout()
+	}
+}
+
+func (r *Rect[T]) RequestChildLayout() {
+	r.flags |= flagNeedsChildLayout
+	if r.parent != nil {
+		r.parent.RequestChildLayout()
+	}
+}
+
 func (r *Rect[T]) minSize() (int, int) {
 	return int(r.minWidth), int(r.minHeight)
 }
 
 func (r *Rect[T]) Layout(x, y, width, height int) {
-	if int(r.displayX) != x || int(r.displayY) != y || int(r.displayWidth) != width || int(r.displayHeight) != height {
+	if int(r.displayX) != x || int(r.displayY) != y || int(r.displayWidth) != width || int(r.displayHeight) != height || r.flags&flagNeedsLayout != 0 {
 		r.displayX = int16(x)
 		r.displayY = int16(y)
 		r.displayWidth = int16(width)
 		r.displayHeight = int16(height)
 		r.flags |= flagNeedsUpdate
+		r.flags &^= flagNeedsLayout
 	}
 }
 

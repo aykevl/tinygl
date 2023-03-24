@@ -72,6 +72,8 @@ func testHelloBanner(screen *tinygl.Screen[pixel.RGB888], base style.Style[pixel
 	all := tinygl.NewVBox[pixel.RGB888](base, topbar, timelabel)
 	screen.SetChild(all)
 	screen.Update()
+	timelabel.SetText("00:00:00")
+	screen.Update()
 }
 
 type ImageDisplay struct {

@@ -25,6 +25,18 @@ func NewText[T pixel.Color](base style.Style[T], text string) *Text[T] {
 	return t
 }
 
+func (t *Text[T]) SetText(text string) {
+	if t.text != text {
+		t.text = text
+		_, outerWidth := tinyfont.LineWidth(t.font, text)
+		if uint32(t.minWidth) != outerWidth {
+			t.minWidth = int16(outerWidth)
+			t.RequestLayout()
+		}
+		t.RequestUpdate()
+	}
+}
+
 func (t *Text[T]) Update(screen *Screen[T]) {
 	if t.flags&flagNeedsUpdate == 0 || t.displayWidth == 0 || t.displayHeight == 0 {
 		return // nothing to do
