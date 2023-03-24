@@ -68,7 +68,8 @@ func TestScreen(t *testing.T) {
 
 func testHelloBanner(screen *tinygl.Screen[pixel.RGB888], base style.Style[pixel.RGB888]) {
 	topbar := tinygl.NewText(base.WithBackground(color.RGBA{R: 255, A: 255}), "Hello world!")
-	all := tinygl.NewVBox[pixel.RGB888](base, topbar)
+	timelabel := tinygl.NewText(base.WithBackground(color.RGBA{A: 255}), "00:00")
+	all := tinygl.NewVBox[pixel.RGB888](base, topbar, timelabel)
 	screen.SetChild(all)
 	screen.Update()
 }
