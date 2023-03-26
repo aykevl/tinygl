@@ -72,7 +72,3 @@ func (b *VBox[T]) Update(screen *Screen[T]) {
 
 	b.flags &^= flagNeedsUpdate | flagNeedsChildUpdate // updated, so no need to redraw next time
 }
-
-func (b *VBox[T]) Draw(x, y int, img pixel.Image[T]) {
-	panic("todo: VBox.Draw")
-}

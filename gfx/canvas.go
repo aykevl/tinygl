@@ -86,10 +86,6 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 	}
 }
 
-func (c *Canvas[T]) Draw(x, y int, img pixel.Image[T]) {
-	panic("todo: Canvas.Draw")
-}
-
 func (c *Canvas[T]) isDirty(blockX, blockY int) bool {
 	blockNum := blockY*int(c.blocksWidth) + blockX
 	return c.dirty[blockNum/8]&(1<<(blockNum%8)) != 0

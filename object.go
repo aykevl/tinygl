@@ -27,9 +27,6 @@ type Object[T pixel.Color] interface {
 	// another call to Update() won't send any new data to the display.
 	Update(screen *Screen[T])
 
-	// Draw the object unconditionally, without changing any flags.
-	Draw(x, y int, buf pixel.Image[T])
-
 	// Minimal width and height of an object.
 	minSize() (width, height int)
 }
@@ -152,10 +149,6 @@ func (r *Rect[T]) Update(screen *Screen[T]) {
 	paintSolidColor(screen, r.background, int(r.displayX), int(r.displayY), int(r.displayWidth), int(r.displayHeight))
 
 	r.flags &^= flagNeedsUpdate
-}
-
-func (r *Rect[T]) Draw(x, y int, img pixel.Image[T]) {
-	fillSolidColor(img, r.background)
 }
 
 func fillSolidColor[T pixel.Color](img pixel.Image[T], color T) {
