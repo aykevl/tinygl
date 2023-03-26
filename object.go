@@ -6,17 +6,14 @@ import (
 )
 
 type Object[T pixel.Color] interface {
-	// Called when adding a child to a parent. Should only ever be called during
-	// the construction of a container object.
-	SetParent(object Object[T])
 
 	// Request an update to this object (that doesn't change the layout).
 	RequestUpdate()
-	RequestChildUpdate()
+	requestChildUpdate()
 
 	// Request a re-layout of this object.
 	RequestLayout()
-	RequestChildLayout()
+	requestChildLayout()
 
 	// Layout the object in the provided area. The object will take up all the
 	// given area (if needed, by filling in the rest with its background color).
@@ -26,6 +23,10 @@ type Object[T pixel.Color] interface {
 	// any. The object will typically mark itself as having finished updating so
 	// another call to Update() won't send any new data to the display.
 	Update(screen *Screen[T])
+
+	// Called when adding a child to a parent. Should only ever be called during
+	// the construction of a container object.
+	setParent(object Object[T])
 
 	// Minimal width and height of an object.
 	minSize() (width, height int)
@@ -73,9 +74,9 @@ func (r *Rect[T]) init(base style.Style[T], width, height int) {
 	r.background = base.Background
 }
 
-func (r *Rect[T]) SetParent(parent Object[T]) {
+func (r *Rect[T]) setParent(parent Object[T]) {
 	if r.parent != nil {
-		panic("SetParent: already set")
+		panic("setParent: already set")
 	}
 	r.parent = parent
 }
@@ -93,28 +94,28 @@ func (r *Rect[T]) Bounds() (int, int, int, int) {
 func (r *Rect[T]) RequestUpdate() {
 	r.flags |= flagNeedsUpdate
 	if r.parent != nil {
-		r.parent.RequestChildUpdate()
+		r.parent.requestChildUpdate()
 	}
 }
 
-func (r *Rect[T]) RequestChildUpdate() {
+func (r *Rect[T]) requestChildUpdate() {
 	r.flags |= flagNeedsChildUpdate
 	if r.parent != nil {
-		r.parent.RequestChildUpdate()
+		r.parent.requestChildUpdate()
 	}
 }
 
 func (r *Rect[T]) RequestLayout() {
 	r.flags |= flagNeedsLayout
 	if r.parent != nil {
-		r.parent.RequestChildLayout()
+		r.parent.requestChildLayout()
 	}
 }
 
-func (r *Rect[T]) RequestChildLayout() {
+func (r *Rect[T]) requestChildLayout() {
 	r.flags |= flagNeedsChildLayout
 	if r.parent != nil {
-		r.parent.RequestChildLayout()
+		r.parent.requestChildLayout()
 	}
 }
 

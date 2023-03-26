@@ -17,7 +17,7 @@ func NewVBox[T pixel.Color](base style.Style[T], children ...Object[T]) *VBox[T]
 	var heightSum int
 	var maxWidth int
 	for _, child := range children {
-		child.SetParent(box)
+		child.setParent(box)
 		childWidth, childHeight := child.minSize()
 		if childWidth > maxWidth {
 			maxWidth = childWidth
