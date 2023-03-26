@@ -60,10 +60,14 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 	// needsUpdate flag is cleared
 
 	// Go through all the tiles and update those that changed.
-	x, y, _, _ := c.Bounds()
+	x, y, _, canvasHeight := c.Bounds()
 	buf := screen.Buffer()[:blockSize*blockSize]
 	img := pixel.NewImageFromBuffer(buf, blockSize)
 	for blockY := 0; blockY < int(c.blocksHeight); blockY++ {
+		blockHeight := blockSize
+		if (blockY+1)*blockSize >= canvasHeight {
+			blockHeight = canvasHeight - (blockY * blockSize)
+		}
 		for blockX := 0; blockX < int(c.blocksWidth); blockX++ {
 			// Note: could be sped up by checking whole bytes at a time.
 			if !c.isDirty(blockX, blockY) {
@@ -81,7 +85,7 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 			for _, obj := range c.objects {
 				obj.Draw(blockX*blockSize, blockY*blockSize, img)
 			}
-			screen.Send(buf, x+blockX*blockSize, y+blockY*blockSize, blockSize, blockSize)
+			screen.Send(buf, x+blockX*blockSize, y+blockY*blockSize, blockSize, blockHeight)
 		}
 	}
 }
