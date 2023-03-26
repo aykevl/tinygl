@@ -51,6 +51,15 @@ func (s *Screen[T]) SetChild(child Object[T]) {
 	s.child = child
 }
 
+// Layout determines the size for all objects in the screen.
+// This is called from Update() so it normally doesn't need to be called
+// manually, but it can sometimes be helpful to know the size of objects before
+// doing further initialization, for example when drawing on a canvas.
+func (s *Screen[T]) Layout() {
+	width, height := s.display.Size()
+	s.child.Layout(0, 0, int(width), int(height))
+}
+
 // Update sends all changes in the screen to the (hardware) display.
 func (s *Screen[T]) Update() error {
 	var start time.Time
@@ -59,14 +68,19 @@ func (s *Screen[T]) Update() error {
 		s.statPixels = 0
 		start = time.Now()
 	}
-	width, height := s.display.Size()
-	s.child.Layout(0, 0, int(width), int(height))
+	s.Layout()
 	s.child.Update(s)
 	if showStats {
 		duration := time.Since(start)
 		println("sent", s.statPixels, "bytes using", s.statBuffers, "buffers in", duration.String())
 	}
 	return s.display.Display()
+}
+
+// Buffer returns the pixel buffer used for sending data to the screen. It can
+// be used inside an Update call.
+func (s *Screen[T]) Buffer() []T {
+	return s.buffer
 }
 
 // Internal function: send an image buffer to the given coordinates.

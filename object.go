@@ -62,6 +62,14 @@ func NewRect[T pixel.Color](base style.Style[T], width, height int) *Rect[T] {
 	return rect
 }
 
+// MakeRect returns a new initialized Rect object. This is mostly useful to
+// initialize an embedded Rect struct in a custom object, use NewRect otherwise.
+func MakeRect[T pixel.Color](base style.Style[T], width, height int) Rect[T] {
+	rect := Rect[T]{}
+	rect.init(base, width, height)
+	return rect
+}
+
 func (r *Rect[T]) init(base style.Style[T], width, height int) {
 	r.minWidth = int16(width)
 	r.minHeight = int16(height)
@@ -73,6 +81,16 @@ func (r *Rect[T]) SetParent(parent Object[T]) {
 		panic("SetParent: already set")
 	}
 	r.parent = parent
+}
+
+// Background returns the current background for this object.
+func (r *Rect[T]) Background() T {
+	return r.background
+}
+
+// Bounds returns the raw (unscaled) display coordinates.
+func (r *Rect[T]) Bounds() (int, int, int, int) {
+	return int(r.displayX), int(r.displayY), int(r.displayWidth), int(r.displayHeight)
 }
 
 func (r *Rect[T]) RequestUpdate() {
@@ -101,6 +119,14 @@ func (r *Rect[T]) RequestChildLayout() {
 	if r.parent != nil {
 		r.parent.RequestChildLayout()
 	}
+}
+
+// NeedsUpdate returns whether this object needs an update, and clears the
+// update flag at the same time.
+func (r *Rect[T]) NeedsUpdate() bool {
+	needsUpdate := r.flags&flagNeedsUpdate != 0
+	r.flags &^= flagNeedsUpdate
+	return needsUpdate
 }
 
 func (r *Rect[T]) minSize() (int, int) {
