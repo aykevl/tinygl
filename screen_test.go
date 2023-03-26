@@ -19,7 +19,7 @@ var flagUpdate = flag.Bool("update", false, "update test outputs")
 
 type testCase struct {
 	name string
-	draw func(*tinygl.Screen[pixel.RGB888], style.Style[pixel.RGB888])
+	test func(t *testing.T, name string, img ImageDisplay)
 }
 
 func TestScreen(t *testing.T) {
@@ -29,51 +29,68 @@ func TestScreen(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			img := NewImageDisplay(160, 128) // same size as ST7735
 
-			// Update the screen.
-			font := &freesans.Regular12pt7b
-			foreground := pixel.NewRGB888(0xff, 0xff, 0xff)
-			background := pixel.NewRGB888(64, 64, 64)
-			base := style.New(100, foreground, background, font)
-			buf := make([]pixel.RGB888, 160*8)
-			screen := tinygl.NewScreen(img, base, buf)
-			tc.draw(screen, base)
-
-			path := filepath.Join("testdata", tc.name+".png")
-
-			if *flagUpdate {
-				f, err := os.Create(path)
-				if err != nil {
-					t.Fatal("could not open test output:", err)
-				}
-				defer f.Close()
-				png.Encode(f, img.image)
-				return
-			}
-
-			f, err := os.Open(path)
-			if err != nil {
-				t.Fatal("could not open test output:", err)
-			}
-			defer f.Close()
-			golden, err := png.Decode(f)
-			if err != nil {
-				t.Fatal("could not decode test output:", err)
-			}
-			if x, y, equal := isSameImage(img.image, golden); !equal {
-				t.Errorf("image %s is not the same (mismatch at x=%d, y=%d)", path, x, y)
-			}
+			// Run the test.
+			tc.test(t, tc.name, img)
 		})
 	}
 }
 
-func testHelloBanner(screen *tinygl.Screen[pixel.RGB888], base style.Style[pixel.RGB888]) {
+func makeScreen[T pixel.Color](img ImageDisplay) (*tinygl.Screen[T], style.Style[T]) {
+	font := &freesans.Regular12pt7b
+	foreground := pixel.NewColor[T](0xff, 0xff, 0xff)
+	background := pixel.NewColor[T](64, 64, 64)
+	base := style.New(100, foreground, background, font)
+	buf := make([]T, 160*8)
+	screen := tinygl.NewScreen(img, base, buf)
+	return screen, base
+}
+
+func testImage(t *testing.T, name string, img ImageDisplay) {
+	path := filepath.Join("testdata", name+".png")
+
+	golden := loadImage(t, path)
+	if x, y, equal := isSameImage(img.image, golden); !equal {
+		if *flagUpdate {
+			// -update flag was passed, so update the PNG file.
+			f, err := os.Create(path)
+			if err != nil {
+				t.Fatal("could not open test output:", err)
+			}
+			defer f.Close()
+			png.Encode(f, img.image)
+		} else {
+			t.Errorf("image %s is not the same (mismatch at x=%d, y=%d)", path, x, y)
+		}
+	}
+}
+
+func loadImage(t *testing.T, path string) image.Image {
+	f, err := os.Open(path)
+	if err != nil {
+		if *flagUpdate {
+			return nil
+		}
+		t.Fatal("could not open test output:", err)
+	}
+	defer f.Close()
+	golden, err := png.Decode(f)
+	if err != nil {
+		t.Fatal("could not decode test output:", err)
+	}
+	return golden
+}
+
+func testHelloBanner(t *testing.T, name string, img ImageDisplay) {
+	screen, base := makeScreen[pixel.RGB888](img)
 	topbar := tinygl.NewText(base.WithBackground(color.RGBA{R: 255, A: 255}), "Hello world!")
 	timelabel := tinygl.NewText(base.WithBackground(color.RGBA{A: 255}), "00:00")
 	all := tinygl.NewVBox[pixel.RGB888](base, topbar, timelabel)
 	screen.SetChild(all)
 	screen.Update()
+	testImage(t, name+"-0", img)
 	timelabel.SetText("00:00:00")
 	screen.Update()
+	testImage(t, name+"-1", img)
 }
 
 type ImageDisplay struct {
@@ -112,6 +129,9 @@ func (img ImageDisplay) Display() error {
 }
 
 func isSameImage(image1, image2 image.Image) (x, y int, equal bool) {
+	if image1 == nil || image2 == nil {
+		return 0, 0, false
+	}
 	if image1.Bounds() != image2.Bounds() {
 		return 0, 0, false
 	}
