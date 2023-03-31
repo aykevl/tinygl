@@ -1,6 +1,9 @@
 package pixel
 
-import "image/color"
+import (
+	"image/color"
+	"math/bits"
+)
 
 // Pixel with a particular color, matching the underlying hardware of a
 // particular display. Each pixel is at least 1 byte in size.
@@ -30,17 +33,19 @@ func NewColor[T Color](r, g, b uint8) T {
 type RGB565BE uint16
 
 func NewRGB565BE(r, g, b uint8) RGB565BE {
-	val := RGB565BE(r&0xF8)<<8 +
-		RGB565BE(g&0xFC)<<3 +
-		RGB565BE(b&0xF8)>>3
+	val := uint16(r&0xF8)<<8 +
+		uint16(g&0xFC)<<3 +
+		uint16(b&0xF8)>>3
 	// Swap endianness (make big endian).
-	// TODO: this can be done in a single instruction on ARM (rev16), but the
-	// compiler doesn't seem to realize this.
-	val = val<<8 | val>>8
-	return val
+	// This is done using a single instruction on ARM (rev16).
+	val = bits.ReverseBytes16(val)
+	return RGB565BE(val)
 }
 
 func (c RGB565BE) RGBA() color.RGBA {
+	// Note: on ARM, the compiler uses a rev instruction instead of a rev16
+	// instruction. I wonder whether this can be optimized further to use rev16
+	// instead?
 	c = c<<8 | c>>8
 	color := color.RGBA{
 		R: uint8(c>>11) << 3,
