@@ -25,6 +25,7 @@ type testCase struct {
 func TestScreen(t *testing.T) {
 	for _, tc := range []testCase{
 		{"hello-banner", testHelloBanner},
+		{"flex-grow", testGrowable},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			img := NewImageDisplay(160, 128) // same size as ST7735
@@ -88,7 +89,29 @@ func testHelloBanner(t *testing.T, name string, img ImageDisplay) {
 	screen.SetChild(all)
 	screen.Update()
 	testImage(t, name+"-0", img)
+
 	timelabel.SetText("00:00:00")
+	screen.Update()
+	testImage(t, name+"-1", img)
+}
+
+func testGrowable(t *testing.T, name string, img ImageDisplay) {
+	screen, base := makeScreen[pixel.RGB888](img)
+	topbar := tinygl.NewText(base.WithBackground(color.RGBA{R: 255, A: 255}), "Grow objects")
+	line1 := tinygl.NewText(base.WithBackground(color.RGBA{A: 255}), "line 1")
+	line2 := tinygl.NewText(base.WithBackground(color.RGBA{B: 255, A: 255}), "line 2")
+	all := tinygl.NewVBox[pixel.RGB888](base, topbar, line1, line2)
+	screen.SetChild(all)
+
+	// Test with a single element that is growable (it takes up all remaining
+	// space).
+	line1.SetGrowable(0, 1)
+	screen.Update()
+	testImage(t, name+"-0", img)
+
+	// Add a second element that's growable. This time, it has a factor of 2, so
+	// it will get two thirds of the slack pixels.
+	line2.SetGrowable(0, 2)
 	screen.Update()
 	testImage(t, name+"-1", img)
 }

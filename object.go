@@ -30,6 +30,10 @@ type Object[T pixel.Color] interface {
 
 	// Minimal width and height of an object.
 	minSize() (width, height int)
+
+	// Grow factor in horizontal and vertical direction. Space that is left over
+	// in a container, is spread over the children according to this factor.
+	growable() (horizontal, vertical int)
 }
 
 type objectFlag uint8
@@ -52,6 +56,7 @@ type Rect[T pixel.Color] struct {
 	displayHeight int16
 	background    T
 	flags         objectFlag
+	grow          uint8 // two 4-bit values (0..15), X is the lower 4 bits and Y the upper 4 bits
 }
 
 func NewRect[T pixel.Color](base style.Style[T], width, height int) *Rect[T] {
@@ -137,9 +142,29 @@ func (r *Rect[T]) Layout(x, y, width, height int) {
 		r.displayY = int16(y)
 		r.displayWidth = int16(width)
 		r.displayHeight = int16(height)
-		r.flags |= flagNeedsUpdate
+		r.RequestUpdate()
 		r.flags &^= flagNeedsLayout
 	}
+}
+
+// SetGrowable sets the grow factor in the horizontal and vertical direction.
+// This means, for example, if one object has a factor of 1 and another of 2,
+// the first object will get ⅓ and the second object will get ⅔ of the remaining
+// space in the container after the minimal space has been given to all
+// children.
+func (r *Rect[T]) SetGrowable(horizontal, vertical int) {
+	if horizontal&0x0f != horizontal || vertical&0x0f != vertical {
+		panic("SetGrowable: out of range")
+	}
+	oldGrow := r.grow
+	r.grow = uint8(horizontal&0x0f) | uint8(vertical&0x0f)<<4
+	if r.grow != oldGrow {
+		r.RequestLayout()
+	}
+}
+
+func (r *Rect[T]) growable() (x, y int) {
+	return int(r.grow & 0x0f), int(r.grow&0xf0) >> 4
 }
 
 func (r *Rect[T]) Update(screen *Screen[T]) {

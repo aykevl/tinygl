@@ -8,6 +8,7 @@ import (
 type VBox[T pixel.Color] struct {
 	Rect[T]
 	children []Object[T]
+	slack    int16
 }
 
 func NewVBox[T pixel.Color](base style.Style[T], children ...Object[T]) *VBox[T] {
@@ -41,14 +42,40 @@ func (b *VBox[T]) Layout(x, y, width, height int) {
 		b.displayWidth = int16(width)
 		b.displayHeight = int16(height)
 	}
-	// TODO: growable objects (like VBox, which grows in height but not in width)
-	var heightSum int
+
+	// Determine minimal size of all children.
+	// TODO: update b.minHeight?
+	var minHeightSum int
+	var growableSum int
 	for _, child := range b.children {
+		_, childGrowable := child.growable()
 		_, childHeight := child.minSize()
-		child.Layout(x, y+heightSum, width, childHeight)
-		heightSum += childHeight
+		minHeightSum += childHeight
+		growableSum += childGrowable
 	}
-	if heightSum < int(b.minHeight) {
+
+	// Go through each child and determine its position and size.
+	// The 'leftover' parts are the extra pixels at the bottom of the VBox.
+	leftoverHeight := height - minHeightSum
+	leftoverGrowable := growableSum
+	if leftoverHeight < 0 {
+		leftoverHeight = 0 // don't shrink children when the VBox is full
+	}
+	childY := y
+	for _, child := range b.children {
+		_, childGrowable := child.growable()
+		_, childHeight := child.minSize()
+		if childGrowable != 0 {
+			growPixels := leftoverHeight * childGrowable / leftoverGrowable
+			childHeight += growPixels
+			leftoverHeight -= growPixels
+			leftoverGrowable -= childGrowable
+		}
+		child.Layout(x, childY, width, childHeight)
+		childY += childHeight
+	}
+	b.slack = int16(leftoverHeight)
+	if leftoverHeight > 0 {
 		// More of the extra space at the end is exposed, so redraw that area.
 		// TODO: only redraw newly exposed area.
 		b.flags |= flagNeedsUpdate
@@ -66,8 +93,8 @@ func (b *VBox[T]) Update(screen *Screen[T]) {
 		child.Update(screen)
 	}
 
-	if b.flags&flagNeedsUpdate != 0 {
-		paintSolidColor(screen, b.background, int(b.displayX), int(b.displayY)+int(b.minHeight), int(b.displayWidth), int(b.displayHeight)-int(b.minHeight))
+	if b.flags&flagNeedsUpdate != 0 && b.slack != 0 {
+		paintSolidColor(screen, b.background, int(b.displayX), int(b.displayY)+int(b.displayHeight)-int(b.slack), int(b.displayWidth), int(b.slack))
 	}
 
 	b.flags &^= flagNeedsUpdate | flagNeedsChildUpdate // updated, so no need to redraw next time
