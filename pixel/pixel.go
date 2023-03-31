@@ -6,7 +6,7 @@ import "image/color"
 // particular display. Each pixel is at least 1 byte in size.
 // The color format is sRGB (or close to it) in all cases.
 type Color interface {
-	RGB565BE | RGB888
+	RGB565BE | RGB555 | RGB888
 	RGBA() color.RGBA
 }
 
@@ -17,6 +17,8 @@ func NewColor[T Color](r, g, b uint8) T {
 	switch any(value).(type) {
 	case RGB565BE:
 		return any(NewRGB565BE(r, g, b)).(T)
+	case RGB555:
+		return any(NewRGB555(r, g, b)).(T)
 	case RGB888:
 		return any(NewRGB888(r, g, b)).(T)
 	default:
@@ -49,6 +51,27 @@ func (c RGB565BE) RGBA() color.RGBA {
 	// Correct color rounding, so that 0xff roundtrips back to 0xff.
 	color.R |= color.R >> 5
 	color.G |= color.G >> 6
+	color.B |= color.B >> 5
+	return color
+}
+
+// Color format used on the GameBoy Advance among others.
+type RGB555 uint16
+
+func NewRGB555(r, g, b uint8) RGB555 {
+	return RGB555(r)>>3 | (RGB555(g)>>3)<<5 | (RGB555(b)>>3)<<10
+}
+
+func (c RGB555) RGBA() color.RGBA {
+	color := color.RGBA{
+		R: uint8(c>>10) << 3,
+		G: uint8(c>>5) << 3,
+		B: uint8(c) << 3,
+		A: 255,
+	}
+	// Correct color rounding, so that 0xff roundtrips back to 0xff.
+	color.R |= color.R >> 5
+	color.G |= color.G >> 5
 	color.B |= color.B >> 5
 	return color
 }
