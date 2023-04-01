@@ -61,13 +61,13 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 
 	// Go through all the tiles and update those that changed.
 	x, y, _, canvasHeight := c.Bounds()
-	buf := screen.Buffer()[:blockSize*blockSize]
-	img := pixel.NewImageFromBuffer(buf, blockSize)
 	for blockY := 0; blockY < int(c.blocksHeight); blockY++ {
 		blockHeight := blockSize
 		if (blockY+1)*blockSize >= canvasHeight {
 			blockHeight = canvasHeight - (blockY * blockSize)
 		}
+		buf := screen.Buffer()
+		maxBlocksPerRow := len(buf) / (blockSize * blockHeight)
 		for blockX := 0; blockX < int(c.blocksWidth); blockX++ {
 			// Note: could be sped up by checking whole bytes at a time.
 			if !c.isDirty(blockX, blockY) {
@@ -77,15 +77,31 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 			// single time.
 			c.clearDirty(blockX, blockY)
 
+			// Find other blocks on the same row that could be painted at the
+			// same time.
+			numBlocks := 1
+			for {
+				if numBlocks >= maxBlocksPerRow || blockX+numBlocks >= int(c.blocksWidth) {
+					break
+				}
+				if !c.isDirty(blockX+numBlocks, blockY) {
+					break
+				}
+				c.clearDirty(blockX+numBlocks, blockY)
+				numBlocks++
+			}
+
 			// Paint block and send.
 			background := c.Background()
-			for i := range buf {
-				buf[i] = background
+			drawBuf := buf[:blockSize*blockHeight*numBlocks]
+			for i := range drawBuf {
+				drawBuf[i] = background
 			}
+			img := pixel.NewImageFromBuffer(drawBuf, blockSize*numBlocks)
 			for _, obj := range c.objects {
 				obj.Draw(blockX*blockSize, blockY*blockSize, img)
 			}
-			screen.Send(buf, x+blockX*blockSize, y+blockY*blockSize, blockSize, blockHeight)
+			screen.Send(drawBuf, x+blockX*blockSize, y+blockY*blockSize, blockSize*numBlocks, blockHeight)
 		}
 	}
 }
