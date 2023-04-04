@@ -5,7 +5,6 @@ import (
 	"unsafe"
 
 	"github.com/aykevl/tinygl/pixel"
-	"github.com/aykevl/tinygl/style"
 )
 
 const showStats = false
@@ -21,12 +20,11 @@ type Screen[T pixel.Color] struct {
 	display     Displayer
 	child       Object[T]
 	buffer      []T
-	scale       style.Scale
 	statBuffers uint16
 	statPixels  int
 }
 
-func NewScreen[T pixel.Color](display Displayer, baseStyle style.Style[T], buffer []T) *Screen[T] {
+func NewScreen[T pixel.Color](display Displayer, buffer []T) *Screen[T] {
 	width, height := display.Size()
 	maxSize := width
 	if height > width {
@@ -37,7 +35,6 @@ func NewScreen[T pixel.Color](display Displayer, baseStyle style.Style[T], buffe
 	}
 	return &Screen[T]{
 		display: display,
-		scale:   baseStyle.Scale,
 		buffer:  buffer,
 	}
 }

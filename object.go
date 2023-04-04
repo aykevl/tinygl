@@ -2,7 +2,6 @@ package tinygl
 
 import (
 	"github.com/aykevl/tinygl/pixel"
-	"github.com/aykevl/tinygl/style"
 )
 
 type Object[T pixel.Color] interface {
@@ -59,24 +58,24 @@ type Rect[T pixel.Color] struct {
 	grow          uint8 // two 4-bit values (0..15), X is the lower 4 bits and Y the upper 4 bits
 }
 
-func NewRect[T pixel.Color](base style.Style[T], width, height int) *Rect[T] {
+func NewRect[T pixel.Color](background T, width, height int) *Rect[T] {
 	rect := &Rect[T]{}
-	rect.init(base, width, height)
+	rect.init(background, width, height)
 	return rect
 }
 
 // MakeRect returns a new initialized Rect object. This is mostly useful to
 // initialize an embedded Rect struct in a custom object, use NewRect otherwise.
-func MakeRect[T pixel.Color](base style.Style[T], width, height int) Rect[T] {
+func MakeRect[T pixel.Color](background T, width, height int) Rect[T] {
 	rect := Rect[T]{}
-	rect.init(base, width, height)
+	rect.init(background, width, height)
 	return rect
 }
 
-func (r *Rect[T]) init(base style.Style[T], width, height int) {
+func (r *Rect[T]) init(background T, width, height int) {
 	r.minWidth = int16(width)
 	r.minHeight = int16(height)
-	r.background = base.Background
+	r.background = background
 }
 
 func (r *Rect[T]) setParent(parent Object[T]) {

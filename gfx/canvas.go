@@ -5,7 +5,6 @@ import (
 
 	"github.com/aykevl/tinygl"
 	"github.com/aykevl/tinygl/pixel"
-	"github.com/aykevl/tinygl/style"
 )
 
 const blockSize = 16 // Note: this value may need some tuning.
@@ -22,9 +21,9 @@ type Canvas[T pixel.Color] struct {
 }
 
 // NewCanvas creates a new tile canvas.
-func NewCanvas[T pixel.Color](base style.Style[T], width, height int) *Canvas[T] {
+func NewCanvas[T pixel.Color](background T, width, height int) *Canvas[T] {
 	c := &Canvas[T]{
-		Rect: tinygl.MakeRect(base, width, height),
+		Rect: tinygl.MakeRect(background, width, height),
 	}
 	return c
 }

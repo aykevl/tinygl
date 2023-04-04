@@ -11,7 +11,6 @@ import (
 
 	"github.com/aykevl/tinygl"
 	"github.com/aykevl/tinygl/pixel"
-	"github.com/aykevl/tinygl/style"
 	"tinygo.org/x/tinyfont/freesans"
 )
 
@@ -36,14 +35,10 @@ func TestScreen(t *testing.T) {
 	}
 }
 
-func makeScreen[T pixel.Color](img ImageDisplay) (*tinygl.Screen[T], style.Style[T]) {
-	font := &freesans.Regular12pt7b
-	foreground := pixel.NewColor[T](0xff, 0xff, 0xff)
-	background := pixel.NewColor[T](64, 64, 64)
-	base := style.New(100, foreground, background, font)
+func makeScreen[T pixel.Color](img ImageDisplay) *tinygl.Screen[T] {
 	buf := make([]T, 160*8)
-	screen := tinygl.NewScreen(img, base, buf)
-	return screen, base
+	screen := tinygl.NewScreen(img, buf)
+	return screen
 }
 
 func testImage(t *testing.T, name string, img ImageDisplay) {
@@ -82,10 +77,13 @@ func loadImage(t *testing.T, path string) image.Image {
 }
 
 func testHelloBanner(t *testing.T, name string, img ImageDisplay) {
-	screen, base := makeScreen[pixel.RGB888](img)
-	topbar := tinygl.NewText(base.WithBackground(color.RGBA{R: 255, A: 255}), "Hello world!")
-	timelabel := tinygl.NewText(base.WithBackground(color.RGBA{A: 255}), "00:00")
-	all := tinygl.NewVBox[pixel.RGB888](base, topbar, timelabel)
+	screen := makeScreen[pixel.RGB888](img)
+	font := &freesans.Regular12pt7b
+	foreground := pixel.NewRGB888(0xff, 0xff, 0xff)
+	background := pixel.NewRGB888(64, 64, 64)
+	topbar := tinygl.NewText(font, foreground, pixel.NewRGB888(255, 0, 0), "Hello world!")
+	timelabel := tinygl.NewText(font, foreground, pixel.NewRGB888(0, 0, 0), "00:00")
+	all := tinygl.NewVBox[pixel.RGB888](background, topbar, timelabel)
 	screen.SetChild(all)
 	screen.Update()
 	testImage(t, name+"-0", img)
@@ -96,11 +94,14 @@ func testHelloBanner(t *testing.T, name string, img ImageDisplay) {
 }
 
 func testGrowable(t *testing.T, name string, img ImageDisplay) {
-	screen, base := makeScreen[pixel.RGB888](img)
-	topbar := tinygl.NewText(base.WithBackground(color.RGBA{R: 255, A: 255}), "Grow objects")
-	line1 := tinygl.NewText(base.WithBackground(color.RGBA{A: 255}), "line 1")
-	line2 := tinygl.NewText(base.WithBackground(color.RGBA{B: 255, A: 255}), "line 2")
-	all := tinygl.NewVBox[pixel.RGB888](base, topbar, line1, line2)
+	screen := makeScreen[pixel.RGB888](img)
+	font := &freesans.Regular12pt7b
+	foreground := pixel.NewRGB888(0xff, 0xff, 0xff)
+	background := pixel.NewRGB888(64, 64, 64)
+	topbar := tinygl.NewText(font, foreground, pixel.NewRGB888(255, 0, 0), "Grow objects")
+	line1 := tinygl.NewText(font, foreground, pixel.NewRGB888(0, 0, 0), "line 1")
+	line2 := tinygl.NewText(font, foreground, pixel.NewRGB888(0, 0, 255), "line 2")
+	all := tinygl.NewVBox[pixel.RGB888](background, topbar, line1, line2)
 	screen.SetChild(all)
 
 	// Test with a single element that is growable (it takes up all remaining

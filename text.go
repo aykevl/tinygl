@@ -2,7 +2,6 @@ package tinygl
 
 import (
 	"github.com/aykevl/tinygl/pixel"
-	"github.com/aykevl/tinygl/style"
 	"tinygo.org/x/tinyfont"
 )
 
@@ -13,15 +12,18 @@ type Text[T pixel.Color] struct {
 	color T
 }
 
-func NewText[T pixel.Color](base style.Style[T], text string) *Text[T] {
+func NewText[T pixel.Color](font *tinyfont.Font, foreground, background T, text string) *Text[T] {
 	t := &Text[T]{text: text}
-	t.font = base.Font
-	t.color = base.Foreground
+	t.font = font
+	t.color = foreground
+	t.background = background
 
 	// Calculate bounding box for the text.
-	_, outerWidth := tinyfont.LineWidth(t.font, text)
-	height := t.font.BBox[1]
-	t.init(base, int(outerWidth), int(height))
+	_, outerWidth := tinyfont.LineWidth(font, text)
+	height := font.BBox[1]
+	t.minWidth = int16(outerWidth)
+	t.minHeight = int16(height)
+
 	return t
 }
 

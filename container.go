@@ -2,7 +2,6 @@ package tinygl
 
 import (
 	"github.com/aykevl/tinygl/pixel"
-	"github.com/aykevl/tinygl/style"
 )
 
 type VBox[T pixel.Color] struct {
@@ -11,7 +10,7 @@ type VBox[T pixel.Color] struct {
 	slack    int16
 }
 
-func NewVBox[T pixel.Color](base style.Style[T], children ...Object[T]) *VBox[T] {
+func NewVBox[T pixel.Color](background T, children ...Object[T]) *VBox[T] {
 	box := &VBox[T]{}
 	box.children = children
 
@@ -26,7 +25,7 @@ func NewVBox[T pixel.Color](base style.Style[T], children ...Object[T]) *VBox[T]
 		heightSum += childHeight
 	}
 
-	box.Rect.init(base, maxWidth, heightSum)
+	box.Rect.init(background, maxWidth, heightSum)
 	box.flags |= flagNeedsUpdate
 	return box
 }
