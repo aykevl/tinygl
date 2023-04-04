@@ -5,11 +5,19 @@ import (
 	"tinygo.org/x/tinyfont"
 )
 
+type TextAlign uint8
+
+const (
+	AlignCenter TextAlign = iota
+	AlignLeft
+)
+
 type Text[T pixel.Color] struct {
 	Rect[T]
 	text  string
 	font  *tinyfont.Font
 	color T
+	align TextAlign
 }
 
 func NewText[T pixel.Color](font *tinyfont.Font, foreground, background T, text string) *Text[T] {
@@ -39,13 +47,24 @@ func (t *Text[T]) SetText(text string) {
 	}
 }
 
+func (t *Text[T]) SetAlign(align TextAlign) {
+	t.align = align
+	t.RequestUpdate()
+}
+
 func (t *Text[T]) Update(screen *Screen[T]) {
 	if t.flags&flagNeedsUpdate == 0 || t.displayWidth == 0 || t.displayHeight == 0 {
 		return // nothing to do
 	}
 
 	// Draw text in the center of the provided area.
-	textX := int(t.displayX) + (int(t.displayWidth)-int(t.minWidth))/2
+	var textX int
+	switch t.align {
+	case AlignLeft:
+		textX = int(t.displayX)
+	default: // AlignCenter
+		textX = int(t.displayX) + (int(t.displayWidth)-int(t.minWidth))/2
+	}
 	textY := int(t.displayY) + (int(t.displayHeight)-int(t.minHeight))/2 - int(t.font.BBox[3])
 	paintText(screen, int(t.displayX), int(t.displayY), int(t.displayWidth), int(t.displayHeight), textX, textY, t.text, t.font, t.background, t.color)
 
