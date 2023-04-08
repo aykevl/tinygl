@@ -25,7 +25,7 @@ type Object[T pixel.Color] interface {
 
 	// Called when adding a child to a parent. Should only ever be called during
 	// the construction of a container object.
-	setParent(object Object[T])
+	SetParent(object Object[T])
 
 	// Minimal width and height of an object.
 	minSize() (width, height int)
@@ -78,9 +78,9 @@ func (r *Rect[T]) init(background T, width, height int) {
 	r.background = background
 }
 
-func (r *Rect[T]) setParent(parent Object[T]) {
+func (r *Rect[T]) SetParent(parent Object[T]) {
 	if r.parent != nil {
-		panic("setParent: already set")
+		panic("SetParent: already set")
 	}
 	r.parent = parent
 }
@@ -123,12 +123,13 @@ func (r *Rect[T]) requestChildLayout() {
 	}
 }
 
-// NeedsUpdate returns whether this object needs an update, and clears the
-// update flag at the same time.
-func (r *Rect[T]) NeedsUpdate() bool {
-	needsUpdate := r.flags&flagNeedsUpdate != 0
-	r.flags &^= flagNeedsUpdate
-	return needsUpdate
+// NeedsUpdate returns whether this object and/or a child object needs an
+// update, and clears the update flag at the same time.
+func (r *Rect[T]) NeedsUpdate() (this, child bool) {
+	this = r.flags&flagNeedsUpdate != 0
+	child = r.flags&flagNeedsChildUpdate != 0
+	r.flags &^= (flagNeedsUpdate | flagNeedsChildUpdate)
+	return this, child
 }
 
 func (r *Rect[T]) minSize() (int, int) {
@@ -171,38 +172,7 @@ func (r *Rect[T]) Update(screen *Screen[T]) {
 		return // nothing to do
 	}
 
-	paintSolidColor(screen, r.background, int(r.displayX), int(r.displayY), int(r.displayWidth), int(r.displayHeight))
+	PaintSolidColor(screen, r.background, int(r.displayX), int(r.displayY), int(r.displayWidth), int(r.displayHeight))
 
 	r.flags &^= flagNeedsUpdate
-}
-
-func fillSolidColor[T pixel.Color](img pixel.Image[T], color T) {
-	buf := img.Buffer()
-	for i := range buf {
-		// TODO: this can be optimized a lot.
-		// - The store can be done as a 32-bit integer, after checking for
-		//   alignment.
-		// - Perhaps multiple stores can be done in a row, to reduce the loop
-		//   overhead.
-		buf[i] = color
-	}
-}
-
-func paintSolidColor[T pixel.Color](screen *Screen[T], color T, x, y, width, height int) {
-	linesPerChunk := len(screen.buffer) / width
-	if linesPerChunk > height {
-		linesPerChunk = height
-	}
-	buffer := screen.buffer[:width*linesPerChunk]
-	img := pixel.NewImageFromBuffer(buffer, width)
-	fillSolidColor(img, color)
-	lineStart := 0
-	for lineStart < height {
-		lines := linesPerChunk
-		if lineStart+lines > height {
-			lines = height - lineStart
-		}
-		screen.Send(buffer, x, y+lineStart, width, lines)
-		lineStart += linesPerChunk
-	}
 }

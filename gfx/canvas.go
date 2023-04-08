@@ -53,7 +53,7 @@ func (c *Canvas[T]) Layout(x, y, width, height int) {
 
 // Update implements tinygl.Object.
 func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
-	if !c.NeedsUpdate() { // check the needsUpdate flag
+	if this, _ := c.NeedsUpdate(); !this { // check the needsUpdate flag
 		return
 	}
 	// needsUpdate flag is cleared

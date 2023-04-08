@@ -17,7 +17,7 @@ func NewVBox[T pixel.Color](background T, children ...Object[T]) *VBox[T] {
 	var heightSum int
 	var maxWidth int
 	for _, child := range children {
-		child.setParent(box)
+		child.SetParent(box)
 		childWidth, childHeight := child.minSize()
 		if childWidth > maxWidth {
 			maxWidth = childWidth
@@ -93,7 +93,7 @@ func (b *VBox[T]) Update(screen *Screen[T]) {
 	}
 
 	if b.flags&flagNeedsUpdate != 0 && b.slack != 0 {
-		paintSolidColor(screen, b.background, int(b.displayX), int(b.displayY)+int(b.displayHeight)-int(b.slack), int(b.displayWidth), int(b.slack))
+		PaintSolidColor(screen, b.background, int(b.displayX), int(b.displayY)+int(b.displayHeight)-int(b.slack), int(b.displayWidth), int(b.slack))
 	}
 
 	b.flags &^= flagNeedsUpdate | flagNeedsChildUpdate // updated, so no need to redraw next time

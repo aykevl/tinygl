@@ -21,8 +21,18 @@ type Text[T pixel.Color] struct {
 }
 
 func NewText[T pixel.Color](font *tinyfont.Font, foreground, background T, text string) *Text[T] {
-	t := &Text[T]{text: text}
-	t.font = font
+	t := MakeText(font, foreground, background, text)
+	return &t
+}
+
+// MakeText returns a new initialized Rect object. This is mostly useful to
+// initialize an embedded Text struct in a custom object. If you want a
+// standalone text object, use NewText.
+func MakeText[T pixel.Color](font *tinyfont.Font, foreground, background T, text string) Text[T] {
+	t := Text[T]{
+		text: text,
+		font: font,
+	}
 	t.color = foreground
 	t.background = background
 
@@ -49,6 +59,18 @@ func (t *Text[T]) SetText(text string) {
 
 func (t *Text[T]) SetAlign(align TextAlign) {
 	t.align = align
+	t.RequestUpdate()
+}
+
+// SetBackground changes the background color of the text.
+func (t *Text[T]) SetBackground(background T) {
+	t.background = background
+	t.RequestUpdate()
+}
+
+// SetColor sets the text color.
+func (t *Text[T]) SetColor(color T) {
+	t.color = color
 	t.RequestUpdate()
 }
 

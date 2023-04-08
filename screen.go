@@ -91,8 +91,41 @@ func (s *Screen[T]) Send(buffer []T, x, y, width, height int) {
 		start = time.Now()
 	}
 	s.display.DrawRGBBitmap8(int16(x), int16(y), rawBuffer, int16(width), int16(height))
-	if showStats {
+	if showStats && len(rawBuffer) >= 4096 {
 		duration := time.Since(start)
 		println("buffer send:", len(rawBuffer), duration.String())
+	}
+}
+
+// Internal function. Do not use directly except in custom widgets.
+//
+// It paints the given area on screen with the given color.
+func PaintSolidColor[T pixel.Color](s *Screen[T], color T, x, y, width, height int) {
+	linesPerChunk := len(s.buffer) / width
+	if linesPerChunk > height {
+		linesPerChunk = height
+	}
+	buffer := s.buffer[:width*linesPerChunk]
+	img := pixel.NewImageFromBuffer(buffer, width)
+	fillSolidColor(img, color)
+	lineStart := 0
+	for lineStart < height {
+		lines := linesPerChunk
+		if lineStart+lines > height {
+			lines = height - lineStart
+		}
+		s.Send(buffer, x, y+lineStart, width, lines)
+		lineStart += linesPerChunk
+	}
+}
+
+func fillSolidColor[T pixel.Color](img pixel.Image[T], color T) {
+	buf := img.Buffer()
+	for i := range buf {
+		// TODO: this can be optimized a lot.
+		// - The store can be done as a 32-bit integer, after checking for
+		//   alignment.
+		// - Perhaps the loop can be unrolled to improve copy performance.
+		buf[i] = color
 	}
 }
