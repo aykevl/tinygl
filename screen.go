@@ -20,11 +20,20 @@ type Screen[T pixel.Color] struct {
 	display     Displayer
 	child       Object[T]
 	buffer      []T
-	statBuffers uint16
 	statPixels  int
+	statBuffers uint16
+	ppcm        int16
+	touchX      int16
+	touchY      int16
+	touchEvent  Event
 }
 
-func NewScreen[T pixel.Color](display Displayer, buffer []T) *Screen[T] {
+// NewScreen creates a new screen to fill the whole display.
+// The buffer needs to be big enough to fill at least horizontal row of pixels,
+// but should preferably be bigger (10% of the screen for example).
+// The ppcm parameter is the number of pixels per centimeter, which is important
+// for touch events. For reference, 120 pixels/inch translate to 47 pixels/cm.
+func NewScreen[T pixel.Color](display Displayer, buffer []T, ppcm int) *Screen[T] {
 	width, height := display.Size()
 	maxSize := width
 	if height > width {
@@ -36,6 +45,7 @@ func NewScreen[T pixel.Color](display Displayer, buffer []T) *Screen[T] {
 	return &Screen[T]{
 		display: display,
 		buffer:  buffer,
+		ppcm:    int16(ppcm),
 	}
 }
 

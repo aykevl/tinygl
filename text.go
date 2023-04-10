@@ -45,6 +45,7 @@ func MakeText[T pixel.Color](font *tinyfont.Font, foreground, background T, text
 	return t
 }
 
+// SetText changes the text for this text label.
 func (t *Text[T]) SetText(text string) {
 	if t.text != text {
 		t.text = text

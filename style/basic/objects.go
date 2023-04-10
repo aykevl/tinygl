@@ -19,6 +19,7 @@ func (theme *Basic[T]) NewVBox(children ...tinygl.Object[T]) *tinygl.VBox[T] {
 type ListBox[T pixel.Color] struct {
 	tinygl.Rect[T]
 	children   []tinygl.Text[T]
+	handler    func(tinygl.Event, int) // event handler
 	slack      int16
 	selected   int16
 	foreground T
@@ -28,13 +29,14 @@ type ListBox[T pixel.Color] struct {
 
 // Create a new listbox with the given elements. The elements (and number of
 // elements) cannot be changed after creation.
-func (theme *Basic[T]) NewListBox(elements []string) *ListBox[T] {
+func (theme *Basic[T]) NewListBox(elements []string, eventHandler func(event tinygl.Event, index int)) *ListBox[T] {
 	// Avoid some heap allocations by allocating all children at once.
 	children := make([]tinygl.Text[T], len(elements))
 	textHeight := theme.Font.BBox[1]
 	box := &ListBox[T]{
 		Rect:       tinygl.MakeRect(theme.Background, 0, int(textHeight)),
 		children:   children,
+		handler:    eventHandler,
 		textHeight: textHeight,
 		selected:   -1,
 		foreground: theme.Foreground,
@@ -136,5 +138,18 @@ func (box *ListBox[T]) Select(index int) {
 		child := &box.children[box.selected]
 		child.SetBackground(box.tint)
 		child.SetColor(box.Background())
+	}
+}
+
+// HandleEvent handles events such as touch events and calls the event handler
+// with the given child as a parameter.
+func (box *ListBox[T]) HandleEvent(event tinygl.Event, x, y int) {
+	if box.handler == nil {
+		return
+	}
+	_, displayY, _, _ := box.Bounds()
+	childIndex := (y - displayY) / int(box.textHeight)
+	if childIndex >= 0 && childIndex < len(box.children) {
+		box.handler(event, childIndex)
 	}
 }

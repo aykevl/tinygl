@@ -106,3 +106,11 @@ func (b *VBox[T]) Update(screen *Screen[T]) {
 
 	b.flags &^= flagNeedsUpdate | flagNeedsChildUpdate // updated, so no need to redraw next time
 }
+
+// HandleEvent propagates an event to its children.
+func (b *VBox[T]) HandleEvent(event Event, x, y int) {
+	for _, child := range b.children {
+		// TODO: don't call HandleEvent on children that shouldn't receive them.
+		child.HandleEvent(event, x, y)
+	}
+}

@@ -5,7 +5,6 @@ import (
 )
 
 type Object[T pixel.Color] interface {
-
 	// Request an update to this object (that doesn't change the layout).
 	RequestUpdate()
 	requestChildUpdate()
@@ -22,6 +21,9 @@ type Object[T pixel.Color] interface {
 	// any. The object will typically mark itself as having finished updating so
 	// another call to Update() won't send any new data to the display.
 	Update(screen *Screen[T])
+
+	// Handle some event (usually, touch events).
+	HandleEvent(event Event, x, y int)
 
 	// Called when adding a child to a parent. Should only ever be called during
 	// the construction of a container object.
@@ -175,4 +177,10 @@ func (r *Rect[T]) Update(screen *Screen[T]) {
 	PaintSolidColor(screen, r.background, int(r.displayX), int(r.displayY), int(r.displayWidth), int(r.displayHeight))
 
 	r.flags &^= flagNeedsUpdate
+}
+
+// HandleEvent handles input events like touch taps.
+func (r *Rect[T]) HandleEvent(event Event, x, y int) {
+	// The base object doesn't handle any events.
+	// This is a no-op.
 }
