@@ -42,10 +42,11 @@ func NewScreen[T pixel.Color](display Displayer, buffer []T) *Screen[T] {
 // SetChild sets the root child. This will typically be a container of some
 // sort.
 func (s *Screen[T]) SetChild(child Object[T]) {
-	if s.child != nil {
-		panic("child already set")
+	if child == s.child {
+		return // nothing to do
 	}
 	s.child = child
+	child.RequestUpdate()
 }
 
 // Layout determines the size for all objects in the screen.

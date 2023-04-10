@@ -55,6 +55,14 @@ func (box *ListBox[T]) Len() int {
 	return len(box.children)
 }
 
+// RequestUpdate will request an update for this object and all of its children.
+func (box *ListBox[T]) RequestUpdate() {
+	box.Rect.RequestUpdate()
+	for i := range box.children {
+		box.children[i].RequestUpdate()
+	}
+}
+
 // Layout implements tinygl.Object.
 func (box *ListBox[T]) Layout(x, y, width, height int) {
 	displayX, displayY, displayWidth, displayHeight := box.Rect.Bounds()

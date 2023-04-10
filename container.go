@@ -30,6 +30,14 @@ func NewVBox[T pixel.Color](background T, children ...Object[T]) *VBox[T] {
 	return box
 }
 
+// RequestUpdate will request an update for this object and all of its children.
+func (b *VBox[T]) RequestUpdate() {
+	b.Rect.RequestUpdate()
+	for _, child := range b.children {
+		child.RequestUpdate()
+	}
+}
+
 func (b *VBox[T]) Layout(x, y, width, height int) {
 	hasRectChange := x != int(b.displayX) || y != int(b.displayY) || width != int(b.displayWidth) || height != int(b.displayHeight)
 	if !hasRectChange && b.flags&(flagNeedsLayout|flagNeedsChildLayout) == 0 {
