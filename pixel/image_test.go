@@ -20,8 +20,8 @@ func TestImageRGB565BE(t *testing.T) {
 		{G: 0x10, A: 0xff},
 		{B: 0x10, A: 0xff},
 	} {
-		image.SetRGBA(4, 2, c)
-		c2 := image.GetRGBA(4, 2)
+		image.Set(4, 2, image.Color(c.R, c.G, c.B))
+		c2 := image.Get(4, 2).RGBA()
 		if c2 != c {
 			t.Errorf("failed to roundtrip color: expected %v but got %v", c, c2)
 		}

@@ -48,16 +48,9 @@ func (img Image[T]) Get(x, y int) T {
 	return img.data[y*img.width+x]
 }
 
-func (img Image[T]) SetRGBA(x, y int, c color.RGBA) {
-	img.Set(x, y, img.getColor(c))
-}
-
-func (img Image[T]) GetRGBA(x, y int) color.RGBA {
-	return img.Get(x, y).RGBA()
-}
-
-func (img Image[T]) getColor(c color.RGBA) T {
-	return NewColor[T](c.R, c.G, c.B)
+// Color is a helper to easily get a color T from R/G/B.
+func (img Image[T]) Color(r, g, b uint8) T {
+	return NewColor[T](r, g, b)
 }
 
 func (img Image[T]) SubImage(x, y, width, height int) Image[T] {
@@ -96,7 +89,7 @@ func (img DisplayerImage[T]) SetPixel(x, y int16, color color.RGBA) {
 	if int(x) >= width || int(y) >= height {
 		return
 	}
-	img.SetRGBA(int(x), int(y), color)
+	img.Set(int(x), int(y), img.Color(color.R, color.G, color.B))
 }
 
 // Size implements the Displayer interface.

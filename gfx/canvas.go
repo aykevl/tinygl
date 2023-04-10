@@ -1,8 +1,6 @@
 package gfx
 
 import (
-	"image/color"
-
 	"github.com/aykevl/tinygl"
 	"github.com/aykevl/tinygl/pixel"
 )
@@ -161,14 +159,14 @@ func (c *Canvas[T]) Clear() {
 
 // CreateRect creates a new rectangle at the given coordinates with the given
 // color.
-func (c *Canvas[T]) CreateRect(x, y, width, height int, color color.RGBA) *Rect[T] {
+func (c *Canvas[T]) CreateRect(x, y, width, height int, color T) *Rect[T] {
 	obj := &Rect[T]{
 		canvas: c,
 		x:      int16(x),
 		y:      int16(y),
 		width:  int16(width),
 		height: int16(height),
-		color:  pixel.NewColor[T](color.R, color.G, color.B),
+		color:  color,
 	}
 	obj.markDirty()
 	c.objects = append(c.objects, obj)
