@@ -49,6 +49,12 @@ func NewScreen[T pixel.Color](display Displayer, buffer []T, ppcm int) *Screen[T
 	}
 }
 
+// Size returns the size of the screen in pixels.
+func (s *Screen[T]) Size() (width, height int) {
+	w, h := s.display.Size()
+	return int(w), int(h)
+}
+
 // SetChild sets the root child. This will typically be a container of some
 // sort.
 func (s *Screen[T]) SetChild(child Object[T]) {
