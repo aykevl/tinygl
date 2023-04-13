@@ -29,14 +29,13 @@ type ListBox[T pixel.Color] struct {
 
 // Create a new listbox with the given elements. The elements (and number of
 // elements) cannot be changed after creation.
-func (theme *Basic[T]) NewListBox(elements []string, eventHandler func(event tinygl.Event, index int)) *ListBox[T] {
+func (theme *Basic[T]) NewListBox(elements []string) *ListBox[T] {
 	// Avoid some heap allocations by allocating all children at once.
 	children := make([]tinygl.Text[T], len(elements))
 	textHeight := theme.Font.BBox[1]
 	box := &ListBox[T]{
 		Rect:       tinygl.MakeRect(theme.Background, 0, int(textHeight)),
 		children:   children,
-		handler:    eventHandler,
 		textHeight: textHeight,
 		selected:   -1,
 		foreground: theme.Foreground,
@@ -139,6 +138,12 @@ func (box *ListBox[T]) Select(index int) {
 		child.SetBackground(box.tint)
 		child.SetColor(box.Background())
 	}
+}
+
+// SetEventHandler sets the callback when one of the elements in the list gets
+// selected.
+func (box *ListBox[T]) SetEventHandler(eventHandler func(event tinygl.Event, index int)) {
+	box.handler = eventHandler
 }
 
 // HandleEvent handles events such as touch events and calls the event handler
