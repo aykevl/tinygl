@@ -88,6 +88,9 @@ func (obj *Rect[T]) SetHidden(hidden bool) {
 
 // SetColor changes the color of the rectangle.
 func (obj *Rect[T]) SetColor(color T) {
+	if color == obj.color {
+		return
+	}
 	obj.color = color
 	if !obj.hidden {
 		obj.markDirty()
