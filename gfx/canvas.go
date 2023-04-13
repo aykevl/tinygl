@@ -16,6 +16,7 @@ type Canvas[T pixel.Color] struct {
 	blocksHeight int16
 	dirty        []byte
 	objects      []Object[T]
+	eventHandler func(tinygl.Event, int, int)
 }
 
 // NewCanvas creates a new tile canvas.
@@ -101,6 +102,24 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 			screen.Send(drawBuf, x+blockX*blockSize, y+blockY*blockSize, blockSize*numBlocks, blockHeight)
 		}
 	}
+}
+
+// SetEventHandler sets the callback when a (touch) event occurs on this canvas.
+func (c *Canvas[T]) SetEventHandler(eventHandler func(event tinygl.Event, x, y int)) {
+	c.eventHandler = eventHandler
+}
+
+// HandleEvent handles events such as touch events and calls the event handler
+// with the x/y coordinate as parameters.
+func (c *Canvas[T]) HandleEvent(event tinygl.Event, x, y int) {
+	if c.eventHandler == nil {
+		return
+	}
+	displayX, displayY, displayWidth, displayHeight := c.Bounds()
+	if x < displayX || x >= displayX+displayWidth || y < displayY || y > displayY+displayHeight {
+		return
+	}
+	c.eventHandler(event, x-displayX, y-displayY)
 }
 
 func (c *Canvas[T]) isDirty(blockX, blockY int) bool {
