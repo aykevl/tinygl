@@ -117,3 +117,27 @@ func (b *VBox[T]) HandleEvent(event Event, x, y int) {
 		child.HandleEvent(event, x, y)
 	}
 }
+
+// EventBox wraps an object and handles events for it.
+type EventBox[T pixel.Color] struct {
+	Object[T]
+	handleEvent func(event Event, x, y int)
+}
+
+// Create a new wrapper container that handles events.
+func NewEventBox[T pixel.Color](child Object[T]) *EventBox[T] {
+	return &EventBox[T]{
+		Object: child,
+	}
+}
+
+// SetEventHandler sets the event callback for this object.
+func (b *EventBox[T]) SetEventHandler(handler func(event Event, x, y int)) {
+	b.handleEvent = handler
+}
+
+func (b *EventBox[T]) HandleEvent(event Event, x, y int) {
+	if b.handleEvent != nil {
+		b.handleEvent(event, x, y)
+	}
+}
