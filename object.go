@@ -38,6 +38,10 @@ type Object[T pixel.Color] interface {
 	// Grow factor in horizontal and vertical direction. Space that is left over
 	// in a container, is spread over the children according to this factor.
 	growable() (horizontal, vertical int)
+
+	// SetGrowable sets the grow factor in the horizontal and vertical
+	// direction.
+	SetGrowable(horizontal, vertical int)
 }
 
 type objectFlag uint8
