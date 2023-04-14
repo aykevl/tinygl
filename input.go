@@ -23,8 +23,9 @@ func (s *Screen[T]) SetTouchState(x, y int16) {
 			s.touchY = y
 		} else if s.touchEvent == TouchTap {
 			// Continuing touch event.
-			if abs(int(s.touchX)-int(x)) > int(s.ppcm)/2 || abs(int(s.touchY)-int(y)) > int(s.ppcm)/2 {
-				// The touch point moved more than 5mm. Treat it as a move event.
+			if abs(int(s.touchX)-int(x)) > int(s.ppi)/4 || abs(int(s.touchY)-int(y)) > int(s.ppi)/4 {
+				// The touch point moved more than ¼inch or 0.635mm. Treat it as
+				// a move event.
 				s.touchEvent = TouchMove
 			}
 			// TODO: long press, double tap, etc.
