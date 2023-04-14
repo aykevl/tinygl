@@ -115,10 +115,7 @@ func (c *Canvas[T]) HandleEvent(event tinygl.Event, x, y int) {
 	if c.eventHandler == nil {
 		return
 	}
-	displayX, displayY, displayWidth, displayHeight := c.Bounds()
-	if x < displayX || x >= displayX+displayWidth || y < displayY || y > displayY+displayHeight {
-		return
-	}
+	displayX, displayY, _, _ := c.Bounds()
 	c.eventHandler(event, x-displayX, y-displayY)
 }
 
