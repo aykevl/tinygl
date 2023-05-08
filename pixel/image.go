@@ -7,59 +7,63 @@ import (
 
 type Image[T Color] struct {
 	// note: no stride because otherwise Buffer() won't work
-	width int // height can be inferred from width and len(data)
-	data  []T
+	width  int16
+	height int16
+	data   unsafe.Pointer
 }
 
 func NewImage[T Color](width, height int) Image[T] {
+	buf := make([]T, width*height)
 	return Image[T]{
-		width: width,
-		data:  make([]T, width*height),
+		width:  int16(width),
+		height: int16(height),
+		data:   unsafe.Pointer(&buf[0]),
 	}
 }
 
 func NewImageFromBuffer[T Color](buffer []T, width int) Image[T] {
-	if len(buffer) != len(buffer)/width*width {
+	height := len(buffer) / width
+	if len(buffer) != width*height {
 		panic("buffer of unexpected size")
 	}
 	return Image[T]{
-		width: width,
-		data:  buffer,
+		width:  int16(width),
+		height: int16(height),
+		data:   unsafe.Pointer(&buffer[0]),
 	}
 }
 
 func (img Image[T]) Buffer() []T {
-	return img.data
+	return unsafe.Slice((*T)(img.data), int(img.width)*int(img.height))
 }
 
 func (img Image[T]) RawBuffer() []uint8 {
-	return BufferFromSlice(img.data)
+	var zeroColor T
+	numBytes := int(unsafe.Sizeof(zeroColor)) * int(img.width) * int(img.height)
+	return unsafe.Slice((*byte)(img.data), numBytes)
 }
 
 func (img Image[T]) Size() (int, int) {
-	return img.width, len(img.data) / img.width
+	return int(img.width), int(img.height)
 }
 
 func (img Image[T]) Set(x, y int, c T) {
-	img.data[y*img.width+x] = c
+	var zeroColor T
+	offset := (y*int(img.width) + x) * int(unsafe.Sizeof(zeroColor))
+	ptr := unsafe.Add(img.data, offset)
+	*((*T)(ptr)) = c
 }
 
 func (img Image[T]) Get(x, y int) T {
-	return img.data[y*img.width+x]
+	var zeroColor T
+	offset := (y*int(img.width) + x) * int(unsafe.Sizeof(zeroColor))
+	ptr := unsafe.Add(img.data, offset)
+	return *((*T)(ptr))
 }
 
 // Color is a helper to easily get a color T from R/G/B.
 func (img Image[T]) Color(r, g, b uint8) T {
 	return NewColor[T](r, g, b)
-}
-
-func (img Image[T]) SubImage(x, y, width, height int) Image[T] {
-	if x != 0 || width != img.width {
-		panic("Image: todo: SubImage with stride")
-	}
-	sub := img
-	sub.data = sub.data[y*img.width : height*img.width]
-	return sub
 }
 
 func BufferFromSlice[T Color](data []T) []byte {
