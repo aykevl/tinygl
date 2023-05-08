@@ -33,6 +33,26 @@ func NewImageFromBuffer[T Color](buffer []T, width int) Image[T] {
 	}
 }
 
+// Rescale returns a new Image buffer based on the img buffer.
+// The contents is undefined after the Rescale operation, and any modification
+// to the returned image will overwrite the underlying image buffer in undefined
+// ways. It will panic if width*height is larger than img.Len().
+func (img Image[T]) Rescale(width, height int) Image[T] {
+	if width*height > img.Len() {
+		panic("Image.Rescale size out of bounds")
+	}
+	return Image[T]{
+		width:  int16(width),
+		height: int16(height),
+		data:   img.data,
+	}
+}
+
+// Len returns the number of pixels in this image buffer.
+func (img Image[T]) Len() int {
+	return int(img.width) * int(img.height)
+}
+
 func (img Image[T]) Buffer() []T {
 	return unsafe.Slice((*T)(img.data), int(img.width)*int(img.height))
 }
@@ -59,6 +79,21 @@ func (img Image[T]) Get(x, y int) T {
 	offset := (y*int(img.width) + x) * int(unsafe.Sizeof(zeroColor))
 	ptr := unsafe.Add(img.data, offset)
 	return *((*T)(ptr))
+}
+
+// FillSolidColor fills the entire image with the given color.
+// This may be faster than setting individual pixels.
+func (img Image[T]) FillSolidColor(color T) {
+	ptr := img.data
+	var zeroColor T
+	for i := 0; i < img.Len(); i++ {
+		// TODO: this can be optimized a lot.
+		// - The store can be done as a 32-bit integer, after checking for
+		//   alignment.
+		// - Perhaps the loop can be unrolled to improve copy performance.
+		*(*T)(ptr) = color
+		ptr = unsafe.Add(ptr, unsafe.Sizeof(zeroColor))
+	}
 }
 
 // Color is a helper to easily get a color T from R/G/B.

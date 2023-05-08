@@ -95,11 +95,10 @@ func (t *Text[T]) Update(screen *Screen[T]) {
 }
 
 func paintText[T pixel.Color](screen *Screen[T], x, y, width, height, textX, textY int, text string, font *tinyfont.Font, background, foreground T) {
-	linesPerChunk := len(screen.buffer) / width
+	linesPerChunk := screen.buffer.Len() / width
 	if linesPerChunk > height {
 		linesPerChunk = height
 	}
-	buffer := screen.buffer[:width*linesPerChunk]
 	lineStart := 0
 	// Note: it may be more efficient to draw text left to right rather than
 	// downwards, drawing only the glyphs that are part of that area.
@@ -108,8 +107,8 @@ func paintText[T pixel.Color](screen *Screen[T], x, y, width, height, textX, tex
 		if lineStart+lines > height {
 			lines = height - lineStart
 		}
-		subimg := pixel.NewImageFromBuffer(buffer[:width*lines], width)
-		fillSolidColor(subimg, background)
+		subimg := screen.buffer.Rescale(width, lines)
+		subimg.FillSolidColor(background)
 		tinyfont.WriteLine(pixel.DisplayerImage[T]{Image: subimg}, font, int16(textX-x), int16(textY-y-lineStart), text, foreground.RGBA())
 		screen.Send(subimg.Buffer(), x, y+lineStart, width, lines)
 		lineStart += linesPerChunk

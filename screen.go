@@ -20,7 +20,7 @@ type Screen[T pixel.Color] struct {
 	display        Displayer
 	child          Object[T]
 	updateCallback func(screen *Screen[T])
-	buffer         []T
+	buffer         pixel.Image[T]
 	statPixels     int
 	statBuffers    uint16
 	ppi            int16
@@ -34,13 +34,13 @@ type Screen[T pixel.Color] struct {
 // but should preferably be bigger (10% of the screen for example).
 // The ppi parameter is the number of pixels per inch, which is important
 // for touch events.
-func NewScreen[T pixel.Color](display Displayer, buffer []T, ppi int) *Screen[T] {
+func NewScreen[T pixel.Color](display Displayer, buffer pixel.Image[T], ppi int) *Screen[T] {
 	width, height := display.Size()
 	maxSize := width
 	if height > width {
 		maxSize = height
 	}
-	if len(buffer) < int(maxSize) {
+	if buffer.Len() < int(maxSize) {
 		panic("buffer too small")
 	}
 	return &Screen[T]{
@@ -109,7 +109,7 @@ func (s *Screen[T]) Update() error {
 // Buffer returns the pixel buffer used for sending data to the screen. It can
 // be used inside an Update call.
 func (s *Screen[T]) Buffer() []T {
-	return s.buffer
+	return s.buffer.Buffer()
 }
 
 // Internal function: send an image buffer to the given coordinates.
@@ -133,31 +133,19 @@ func (s *Screen[T]) Send(buffer []T, x, y, width, height int) {
 //
 // It paints the given area on screen with the given color.
 func PaintSolidColor[T pixel.Color](s *Screen[T], color T, x, y, width, height int) {
-	linesPerChunk := len(s.buffer) / width
+	linesPerChunk := s.buffer.Len() / width
 	if linesPerChunk > height {
 		linesPerChunk = height
 	}
-	buffer := s.buffer[:width*linesPerChunk]
-	img := pixel.NewImageFromBuffer(buffer, width)
-	fillSolidColor(img, color)
+	img := s.buffer.Rescale(width, linesPerChunk)
+	img.FillSolidColor(color)
 	lineStart := 0
 	for lineStart < height {
 		lines := linesPerChunk
 		if lineStart+lines > height {
 			lines = height - lineStart
 		}
-		s.Send(buffer, x, y+lineStart, width, lines)
+		s.Send(img.Buffer(), x, y+lineStart, width, lines)
 		lineStart += linesPerChunk
-	}
-}
-
-func fillSolidColor[T pixel.Color](img pixel.Image[T], color T) {
-	buf := img.Buffer()
-	for i := range buf {
-		// TODO: this can be optimized a lot.
-		// - The store can be done as a 32-bit integer, after checking for
-		//   alignment.
-		// - Perhaps the loop can be unrolled to improve copy performance.
-		buf[i] = color
 	}
 }
