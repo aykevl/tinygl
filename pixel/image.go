@@ -6,7 +6,6 @@ import (
 )
 
 type Image[T Color] struct {
-	// note: no stride because otherwise Buffer() won't work
 	width  int16
 	height int16
 	data   unsafe.Pointer
@@ -18,18 +17,6 @@ func NewImage[T Color](width, height int) Image[T] {
 		width:  int16(width),
 		height: int16(height),
 		data:   unsafe.Pointer(&buf[0]),
-	}
-}
-
-func NewImageFromBuffer[T Color](buffer []T, width int) Image[T] {
-	height := len(buffer) / width
-	if len(buffer) != width*height {
-		panic("buffer of unexpected size")
-	}
-	return Image[T]{
-		width:  int16(width),
-		height: int16(height),
-		data:   unsafe.Pointer(&buffer[0]),
 	}
 }
 
@@ -64,10 +51,6 @@ func (img Image[T]) LimitHeight(height int) Image[T] {
 // Len returns the number of pixels in this image buffer.
 func (img Image[T]) Len() int {
 	return int(img.width) * int(img.height)
-}
-
-func (img Image[T]) Buffer() []T {
-	return unsafe.Slice((*T)(img.data), int(img.width)*int(img.height))
 }
 
 func (img Image[T]) RawBuffer() []uint8 {
@@ -112,19 +95,6 @@ func (img Image[T]) FillSolidColor(color T) {
 // Color is a helper to easily get a color T from R/G/B.
 func (img Image[T]) Color(r, g, b uint8) T {
 	return NewColor[T](r, g, b)
-}
-
-func BufferFromSlice[T Color](data []T) []byte {
-	var zeroColor T // used for size calculation
-
-	if len(data) == 0 {
-		return nil
-	}
-
-	// Cast data (which is a []T) to a []byte slice.
-	// This should be a safe operation, at least in TinyGo.
-	ptr := (*uint8)(unsafe.Pointer(unsafe.SliceData(data)))
-	return unsafe.Slice(ptr, len(data)*int(unsafe.Sizeof(zeroColor)))
 }
 
 // Wrapper for Image that implements the drivers.Displayer interface.
