@@ -48,6 +48,19 @@ func (img Image[T]) Rescale(width, height int) Image[T] {
 	}
 }
 
+// LimitHeight returns a subimage with the bottom part cut off, as specified by
+// height.
+func (img Image[T]) LimitHeight(height int) Image[T] {
+	if height < 0 || height > int(img.height) {
+		panic("Image.LimitHeight: out of bounds")
+	}
+	return Image[T]{
+		width:  img.width,
+		height: int16(height),
+		data:   img.data,
+	}
+}
+
 // Len returns the number of pixels in this image buffer.
 func (img Image[T]) Len() int {
 	return int(img.width) * int(img.height)

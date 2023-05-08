@@ -108,20 +108,21 @@ func (s *Screen[T]) Update() error {
 
 // Buffer returns the pixel buffer used for sending data to the screen. It can
 // be used inside an Update call.
-func (s *Screen[T]) Buffer() []T {
-	return s.buffer.Buffer()
+func (s *Screen[T]) Buffer() pixel.Image[T] {
+	return s.buffer
 }
 
 // Internal function: send an image buffer to the given coordinates.
-func (s *Screen[T]) Send(buffer []T, x, y, width, height int) {
-	rawBuffer := pixel.BufferFromSlice(buffer)
+func (s *Screen[T]) Send(x, y int, buffer pixel.Image[T]) {
+	rawBuffer := buffer.RawBuffer()
 	var start time.Time
 	if showStats {
 		var zeroColor T
 		s.statBuffers++
-		s.statPixels += len(buffer) * int(unsafe.Sizeof(zeroColor))
+		s.statPixels += buffer.Len() * int(unsafe.Sizeof(zeroColor))
 		start = time.Now()
 	}
+	width, height := buffer.Size()
 	s.display.DrawRGBBitmap8(int16(x), int16(y), rawBuffer, int16(width), int16(height))
 	if showStats && len(rawBuffer) >= 4096 {
 		duration := time.Since(start)
@@ -145,7 +146,7 @@ func PaintSolidColor[T pixel.Color](s *Screen[T], color T, x, y, width, height i
 		if lineStart+lines > height {
 			lines = height - lineStart
 		}
-		s.Send(img.Buffer(), x, y+lineStart, width, lines)
+		s.Send(x, y+lineStart, img.LimitHeight(lines))
 		lineStart += linesPerChunk
 	}
 }

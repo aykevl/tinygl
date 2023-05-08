@@ -65,7 +65,7 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 			blockHeight = canvasHeight - (blockY * blockSize)
 		}
 		buf := screen.Buffer()
-		maxBlocksPerRow := len(buf) / (blockSize * blockHeight)
+		maxBlocksPerRow := buf.Len() / (blockSize * blockHeight)
 		for blockX := 0; blockX < int(c.blocksWidth); blockX++ {
 			// Note: could be sped up by checking whole bytes at a time.
 			if !c.isDirty(blockX, blockY) {
@@ -90,16 +90,12 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 			}
 
 			// Paint block and send.
-			background := c.Background()
-			drawBuf := buf[:blockSize*blockHeight*numBlocks]
-			for i := range drawBuf {
-				drawBuf[i] = background
-			}
-			img := pixel.NewImageFromBuffer(drawBuf, blockSize*numBlocks)
+			img := buf.Rescale(blockSize*numBlocks, blockHeight)
+			img.FillSolidColor(c.Background())
 			for _, obj := range c.objects {
 				obj.Draw(blockX*blockSize, blockY*blockSize, img)
 			}
-			screen.Send(drawBuf, x+blockX*blockSize, y+blockY*blockSize, blockSize*numBlocks, blockHeight)
+			screen.Send(x+blockX*blockSize, y+blockY*blockSize, img)
 		}
 	}
 }

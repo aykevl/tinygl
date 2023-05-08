@@ -110,7 +110,7 @@ func paintText[T pixel.Color](screen *Screen[T], x, y, width, height, textX, tex
 		subimg := screen.buffer.Rescale(width, lines)
 		subimg.FillSolidColor(background)
 		tinyfont.WriteLine(pixel.DisplayerImage[T]{Image: subimg}, font, int16(textX-x), int16(textY-y-lineStart), text, foreground.RGBA())
-		screen.Send(subimg.Buffer(), x, y+lineStart, width, lines)
+		screen.Send(x, y+lineStart, subimg.LimitHeight(lines))
 		lineStart += linesPerChunk
 	}
 }
