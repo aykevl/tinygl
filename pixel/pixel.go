@@ -9,7 +9,7 @@ import (
 // particular display. Each pixel is at least 1 byte in size.
 // The color format is sRGB (or close to it) in all cases.
 type Color interface {
-	RGB565BE | RGB555 | RGB444BE | RGB888
+	RGB888 | RGB565BE | RGB555 | RGB444BE
 
 	// The number of bits when stored.
 	// This means for example that RGB555 (which is still stored as a 16-bit
@@ -24,16 +24,39 @@ func NewColor[T Color](r, g, b uint8) T {
 	// trivially optimized away after instantiation.
 	var value T
 	switch any(value).(type) {
+	case RGB888:
+		return any(NewRGB888(r, g, b)).(T)
 	case RGB565BE:
 		return any(NewRGB565BE(r, g, b)).(T)
 	case RGB555:
 		return any(NewRGB555(r, g, b)).(T)
 	case RGB444BE:
 		return any(NewRGB444BE(r, g, b)).(T)
-	case RGB888:
-		return any(NewRGB888(r, g, b)).(T)
 	default:
 		panic("unknown color format")
+	}
+}
+
+// RGB888 format, more commonly used in other places. Mainly here to prove the
+// abstractions here work for other formats too.
+type RGB888 struct {
+	R, G, B uint8
+}
+
+func NewRGB888(r, g, b uint8) RGB888 {
+	return RGB888{r, g, b}
+}
+
+func (c RGB888) BitsPerPixel() int {
+	return 24
+}
+
+func (c RGB888) RGBA() color.RGBA {
+	return color.RGBA{
+		R: c.R,
+		G: c.G,
+		B: c.B,
+		A: 255,
 	}
 }
 
@@ -122,27 +145,4 @@ func (c RGB444BE) RGBA() color.RGBA {
 	color.G |= color.G >> 4
 	color.B |= color.B >> 4
 	return color
-}
-
-// RGB888 format, more commonly used in other places. Mainly here to prove the
-// abstractions here work for other formats too.
-type RGB888 struct {
-	R, G, B uint8
-}
-
-func NewRGB888(r, g, b uint8) RGB888 {
-	return RGB888{r, g, b}
-}
-
-func (c RGB888) BitsPerPixel() int {
-	return 24
-}
-
-func (c RGB888) RGBA() color.RGBA {
-	return color.RGBA{
-		R: c.R,
-		G: c.G,
-		B: c.B,
-		A: 255,
-	}
 }
