@@ -12,6 +12,8 @@ const blockSize = 16 // Note: this value may need some tuning.
 // only small parts of the screen changed.
 type Canvas[T pixel.Color] struct {
 	tinygl.Rect[T]
+	minWidth     int16
+	minHeight    int16
 	blocksWidth  int16
 	blocksHeight int16
 	dirty        []byte
@@ -22,9 +24,16 @@ type Canvas[T pixel.Color] struct {
 // NewCanvas creates a new tile canvas.
 func NewCanvas[T pixel.Color](background T, width, height int) *Canvas[T] {
 	c := &Canvas[T]{
-		Rect: tinygl.MakeRect(background, width, height),
+		Rect:      tinygl.MakeRect(background),
+		minWidth:  int16(width),
+		minHeight: int16(height),
 	}
 	return c
+}
+
+// MinSize returns the minimal size as set when the canvas was created.
+func (c *Canvas[T]) MinSize() (width, height int) {
+	return int(c.minWidth), int(c.minHeight)
 }
 
 // Layout implements tinygl.Object.

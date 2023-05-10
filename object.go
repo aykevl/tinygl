@@ -30,7 +30,7 @@ type Object[T pixel.Color] interface {
 	SetParent(object Object[T])
 
 	// Minimal width and height of an object.
-	minSize() (width, height int)
+	MinSize() (width, height int)
 
 	// Display rect used by this object.
 	Bounds() (x, y, width, height int)
@@ -56,8 +56,6 @@ const (
 type Rect[T pixel.Color] struct {
 	parent Object[T]
 
-	minWidth      int16 // device independent pixels
-	minHeight     int16
 	displayX      int16 // "display" pixels are physical pixels
 	displayY      int16
 	displayWidth  int16
@@ -67,24 +65,12 @@ type Rect[T pixel.Color] struct {
 	grow          uint8 // two 4-bit values (0..15), X is the lower 4 bits and Y the upper 4 bits
 }
 
-func NewRect[T pixel.Color](background T, width, height int) *Rect[T] {
-	rect := &Rect[T]{}
-	rect.init(background, width, height)
-	return rect
-}
-
 // MakeRect returns a new initialized Rect object. This is mostly useful to
-// initialize an embedded Rect struct in a custom object, use NewRect otherwise.
-func MakeRect[T pixel.Color](background T, width, height int) Rect[T] {
-	rect := Rect[T]{}
-	rect.init(background, width, height)
-	return rect
-}
-
-func (r *Rect[T]) init(background T, width, height int) {
-	r.minWidth = int16(width)
-	r.minHeight = int16(height)
-	r.background = background
+// initialize an embedded Rect struct in a custom object.
+func MakeRect[T pixel.Color](background T) Rect[T] {
+	return Rect[T]{
+		background: background,
+	}
 }
 
 func (r *Rect[T]) SetParent(parent Object[T]) {
@@ -139,10 +125,6 @@ func (r *Rect[T]) NeedsUpdate() (this, child bool) {
 	child = r.flags&flagNeedsChildUpdate != 0
 	r.flags &^= (flagNeedsUpdate | flagNeedsChildUpdate)
 	return this, child
-}
-
-func (r *Rect[T]) minSize() (int, int) {
-	return int(r.minWidth), int(r.minHeight)
 }
 
 func (r *Rect[T]) Layout(x, y, width, height int) {

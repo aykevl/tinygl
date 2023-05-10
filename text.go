@@ -14,10 +14,11 @@ const (
 
 type Text[T pixel.Color] struct {
 	Rect[T]
-	text  string
-	font  *tinyfont.Font
-	color T
-	align TextAlign
+	text      string
+	font      *tinyfont.Font
+	textWidth int16
+	color     T
+	align     TextAlign
 }
 
 func NewText[T pixel.Color](font *tinyfont.Font, foreground, background T, text string) *Text[T] {
@@ -38,11 +39,16 @@ func MakeText[T pixel.Color](font *tinyfont.Font, foreground, background T, text
 
 	// Calculate bounding box for the text.
 	_, outerWidth := tinyfont.LineWidth(font, text)
-	height := font.BBox[1]
-	t.minWidth = int16(outerWidth)
-	t.minHeight = int16(height)
+	t.textWidth = int16(outerWidth)
 
 	return t
+}
+
+// MinSize returns the minimal size of the text label.
+func (t *Text[T]) MinSize() (width, height int) {
+	width = int(t.textWidth)
+	height = int(t.font.BBox[1])
+	return
 }
 
 // SetText changes the text for this text label.
@@ -50,8 +56,8 @@ func (t *Text[T]) SetText(text string) {
 	if t.text != text {
 		t.text = text
 		_, outerWidth := tinyfont.LineWidth(t.font, text)
-		if uint32(t.minWidth) != outerWidth {
-			t.minWidth = int16(outerWidth)
+		if uint32(t.textWidth) != outerWidth {
+			t.textWidth = int16(outerWidth)
 			t.RequestLayout()
 		}
 		t.RequestUpdate()
@@ -86,9 +92,9 @@ func (t *Text[T]) Update(screen *Screen[T]) {
 	case AlignLeft:
 		textX = int(t.displayX)
 	default: // AlignCenter
-		textX = int(t.displayX) + (int(t.displayWidth)-int(t.minWidth))/2
+		textX = int(t.displayX) + (int(t.displayWidth)-int(t.textWidth))/2
 	}
-	textY := int(t.displayY) + (int(t.displayHeight)-int(t.minHeight))/2 - int(t.font.BBox[3])
+	textY := int(t.displayY) + (int(t.displayHeight)-int(t.font.BBox[1]))/2 - int(t.font.BBox[3])
 	paintText(screen, int(t.displayX), int(t.displayY), int(t.displayWidth), int(t.displayHeight), textX, textY, t.text, t.font, t.background, t.color)
 
 	t.flags &^= flagNeedsUpdate

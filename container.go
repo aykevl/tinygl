@@ -14,18 +14,11 @@ func NewVBox[T pixel.Color](background T, children ...Object[T]) *VBox[T] {
 	box := &VBox[T]{}
 	box.children = children
 
-	var heightSum int
-	var maxWidth int
 	for _, child := range children {
 		child.SetParent(box)
-		childWidth, childHeight := child.minSize()
-		if childWidth > maxWidth {
-			maxWidth = childWidth
-		}
-		heightSum += childHeight
 	}
 
-	box.Rect.init(background, maxWidth, heightSum)
+	box.Rect.background = background
 	box.flags |= flagNeedsUpdate
 	return box
 }
@@ -36,6 +29,19 @@ func (b *VBox[T]) RequestUpdate() {
 	for _, child := range b.children {
 		child.RequestUpdate()
 	}
+}
+
+// MinSize returns the minimal size to fit around all the elements in this
+// container.
+func (b *VBox[T]) MinSize() (width, height int) {
+	for _, child := range b.children {
+		childWidth, childHeight := child.MinSize()
+		if childWidth > width {
+			width = childWidth
+		}
+		height += childHeight
+	}
+	return
 }
 
 func (b *VBox[T]) Layout(x, y, width, height int) {
@@ -51,12 +57,11 @@ func (b *VBox[T]) Layout(x, y, width, height int) {
 	}
 
 	// Determine minimal size of all children.
-	// TODO: update b.minHeight?
 	var minHeightSum int
 	var growableSum int
 	for _, child := range b.children {
 		_, childGrowable := child.growable()
-		_, childHeight := child.minSize()
+		_, childHeight := child.MinSize()
 		minHeightSum += childHeight
 		growableSum += childGrowable
 	}
@@ -71,7 +76,7 @@ func (b *VBox[T]) Layout(x, y, width, height int) {
 	childY := y
 	for _, child := range b.children {
 		_, childGrowable := child.growable()
-		_, childHeight := child.minSize()
+		_, childHeight := child.MinSize()
 		if childGrowable != 0 {
 			growPixels := leftoverHeight * childGrowable / leftoverGrowable
 			childHeight += growPixels

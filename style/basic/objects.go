@@ -35,7 +35,7 @@ func (theme *Basic[T]) NewListBox(elements []string) *ListBox[T] {
 	children := make([]tinygl.Text[T], len(elements))
 	textHeight := theme.Font.BBox[1]
 	box := &ListBox[T]{
-		Rect:       tinygl.MakeRect(theme.Background, 0, int(textHeight)),
+		Rect:       tinygl.MakeRect(theme.Background),
 		children:   children,
 		textHeight: textHeight,
 		selected:   -1,
@@ -51,6 +51,12 @@ func (theme *Basic[T]) NewListBox(elements []string) *ListBox[T] {
 	}
 
 	return box
+}
+
+// MinSize returns the height of all the list items combined.
+// The minimal width is always zero (it is expected to set to expand).
+func (box *ListBox[T]) MinSize() (width, height int) {
+	return 0, int(box.textHeight) * len(box.children)
 }
 
 // Len returns the number of elements in the listbox.
