@@ -76,12 +76,15 @@ func (b *VBox[T]) Layout(x, y, width, height int) {
 	childY := y
 	for _, child := range b.children {
 		_, childGrowable := child.growable()
-		_, childHeight := child.MinSize()
-		if childGrowable != 0 {
-			growPixels := leftoverHeight * childGrowable / leftoverGrowable
-			childHeight += growPixels
-			leftoverHeight -= growPixels
-			leftoverGrowable -= childGrowable
+		childHeight := 0
+		if childY < y+height {
+			_, childHeight = child.MinSize()
+			if childGrowable != 0 {
+				growPixels := leftoverHeight * childGrowable / leftoverGrowable
+				childHeight += growPixels
+				leftoverHeight -= growPixels
+				leftoverGrowable -= childGrowable
+			}
 		}
 		child.Layout(x, childY, width, childHeight)
 		childY += childHeight
