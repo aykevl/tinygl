@@ -86,7 +86,7 @@ func (box *ListBox[T]) layoutChildren(x, y, width, height int) {
 		child := &box.children[i]
 		childHeight := int(box.textHeight)
 		if (i+1)*int(box.textHeight) > height {
-			childHeight = (i+1)*int(box.textHeight) - height
+			childHeight = height - i*int(box.textHeight)
 		}
 		if childHeight < 0 {
 			childHeight = 0
