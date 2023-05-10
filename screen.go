@@ -17,16 +17,15 @@ type Displayer interface {
 }
 
 type Screen[T pixel.Color] struct {
-	display        Displayer
-	child          Object[T]
-	updateCallback func(screen *Screen[T])
-	buffer         pixel.Image[T]
-	statPixels     int
-	statBuffers    uint16
-	ppi            int16
-	touchX         int16
-	touchY         int16
-	touchEvent     Event
+	display     Displayer
+	child       Object[T]
+	buffer      pixel.Image[T]
+	statPixels  int
+	statBuffers uint16
+	ppi         int16
+	touchX      int16
+	touchY      int16
+	touchEvent  Event
 }
 
 // NewScreen creates a new screen to fill the whole display.
@@ -66,13 +65,6 @@ func (s *Screen[T]) SetChild(child Object[T]) {
 	child.RequestUpdate()
 }
 
-// SetUpdateCallback sets the callback that is called after every screen update.
-// It is mostly useful to read events an update the screen with those events
-// (for example, to call SetTouchState).
-func (s *Screen[T]) SetUpdateCallback(inputRead func(screen *Screen[T])) {
-	s.updateCallback = inputRead
-}
-
 // Layout determines the size for all objects in the screen.
 // This is called from Update() so it normally doesn't need to be called
 // manually, but it can sometimes be helpful to know the size of objects before
@@ -99,9 +91,6 @@ func (s *Screen[T]) Update() error {
 	err := s.display.Display()
 	if err != nil {
 		return err
-	}
-	if s.updateCallback != nil {
-		s.updateCallback(s) // read keyboard/touch events
 	}
 	return nil
 }
