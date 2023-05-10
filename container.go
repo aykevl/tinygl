@@ -110,7 +110,7 @@ func (b *VBox[T]) Update(screen *Screen[T]) {
 // HandleEvent propagates an event to its children.
 func (b *VBox[T]) HandleEvent(event Event, x, y int) {
 	for _, child := range b.children {
-		childX, childY, childWidth, childHeight := child.bounds()
+		childX, childY, childWidth, childHeight := child.Bounds()
 		if x < childX || y < childY || x >= childX+childWidth || y >= childY+childHeight {
 			continue
 		}

@@ -33,7 +33,7 @@ type Object[T pixel.Color] interface {
 	minSize() (width, height int)
 
 	// Display rect used by this object.
-	bounds() (x, y, width, height int)
+	Bounds() (x, y, width, height int)
 
 	// Grow factor in horizontal and vertical direction. Space that is left over
 	// in a container, is spread over the children according to this factor.
@@ -99,7 +99,7 @@ func (r *Rect[T]) Background() T {
 	return r.background
 }
 
-// Bounds returns the raw (unscaled) display coordinates.
+// Bounds returns the area on the display that is being used by this rectangle.
 func (r *Rect[T]) Bounds() (int, int, int, int) {
 	return int(r.displayX), int(r.displayY), int(r.displayWidth), int(r.displayHeight)
 }
@@ -143,11 +143,6 @@ func (r *Rect[T]) NeedsUpdate() (this, child bool) {
 
 func (r *Rect[T]) minSize() (int, int) {
 	return int(r.minWidth), int(r.minHeight)
-}
-
-// bounds returns the area on the display that is being used by this rectangle.
-func (r *Rect[T]) bounds() (x, y, width, height int) {
-	return int(r.displayX), int(r.displayY), int(r.displayWidth), int(r.displayHeight)
 }
 
 func (r *Rect[T]) Layout(x, y, width, height int) {
