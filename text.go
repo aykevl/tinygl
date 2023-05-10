@@ -17,8 +17,8 @@ type Text[T pixel.Color] struct {
 	text      string
 	font      *tinyfont.Font
 	textWidth int16
+	extra     uint16 // alignment, padding
 	color     T
-	align     TextAlign
 }
 
 func NewText[T pixel.Color](font *tinyfont.Font, foreground, background T, text string) *Text[T] {
@@ -46,8 +46,9 @@ func MakeText[T pixel.Color](font *tinyfont.Font, foreground, background T, text
 
 // MinSize returns the minimal size of the text label.
 func (t *Text[T]) MinSize() (width, height int) {
-	width = int(t.textWidth)
-	height = int(t.font.BBox[1])
+	padHorizontal, padVertical := t.padding()
+	width = int(t.textWidth) + padHorizontal*2
+	height = int(t.font.BBox[1]) + padVertical*2
 	return
 }
 
@@ -65,8 +66,26 @@ func (t *Text[T]) SetText(text string) {
 }
 
 func (t *Text[T]) SetAlign(align TextAlign) {
-	t.align = align
+	t.extra = (t.extra &^ 0x0003) | uint16(align)
 	t.RequestUpdate()
+}
+
+func (t *Text[T]) align() TextAlign {
+	return TextAlign(t.extra & 0x0003)
+}
+
+// Set horizontal and vertical padding in screen pixels. The padding must be a
+// positive integer that is less than 128.
+func (t *Text[T]) SetPadding(horizontal, vertical int) {
+	t.extra = (t.extra & 0xfffc) | uint16(horizontal&0x7f)<<2 | uint16(vertical&0x7f)<<9
+
+	t.RequestLayout()
+}
+
+func (t *Text[T]) padding() (horizontal, vertical int) {
+	horizontal = (int(t.extra) >> 2) & 0x7f
+	vertical = int(t.extra) >> 9
+	return
 }
 
 // SetBackground changes the background color of the text.
@@ -88,9 +107,10 @@ func (t *Text[T]) Update(screen *Screen[T]) {
 
 	// Draw text in the center of the provided area.
 	var textX int
-	switch t.align {
+	switch t.align() {
 	case AlignLeft:
-		textX = int(t.displayX)
+		padHorizontal, _ := t.padding()
+		textX = int(t.displayX) + padHorizontal
 	default: // AlignCenter
 		textX = int(t.displayX) + (int(t.displayWidth)-int(t.textWidth))/2
 	}
@@ -104,6 +124,13 @@ func paintText[T pixel.Color](screen *Screen[T], x, y, width, height, textX, tex
 	linesPerChunk := screen.buffer.Len() / width
 	if linesPerChunk > height {
 		linesPerChunk = height
+	}
+	screenWidth, screenHeight := screen.Size()
+	if x+width > screenWidth {
+		width = screenWidth - x
+	}
+	if y+height > screenHeight {
+		height = screenHeight - y
 	}
 	lineStart := 0
 	// Note: it may be more efficient to draw text left to right rather than

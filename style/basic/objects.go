@@ -20,11 +20,9 @@ type ListBox[T pixel.Color] struct {
 	tinygl.Rect[T]
 	children   []tinygl.Text[T]
 	handler    func(tinygl.Event, int) // event handler
-	slack      int16
 	selected   int16
 	foreground T
 	tint       T
-	textHeight int8
 	numCols    uint8 // number of columns, to make it a grid
 }
 
@@ -33,11 +31,9 @@ type ListBox[T pixel.Color] struct {
 func (theme *Basic[T]) NewListBox(elements []string) *ListBox[T] {
 	// Avoid some heap allocations by allocating all children at once.
 	children := make([]tinygl.Text[T], len(elements))
-	textHeight := theme.Font.BBox[1]
 	box := &ListBox[T]{
 		Rect:       tinygl.MakeRect(theme.Background),
 		children:   children,
-		textHeight: textHeight,
 		selected:   -1,
 		foreground: theme.Foreground,
 		tint:       theme.Tint,
@@ -56,7 +52,12 @@ func (theme *Basic[T]) NewListBox(elements []string) *ListBox[T] {
 // MinSize returns the height of all the list items combined.
 // The minimal width is always zero (it is expected to set to expand).
 func (box *ListBox[T]) MinSize() (width, height int) {
-	return 0, int(box.textHeight) * len(box.children)
+	if len(box.children) == 0 {
+		return 0, 0
+	}
+	firstChild := &box.children[0]
+	_, childHeight := firstChild.MinSize()
+	return 0, childHeight * len(box.children)
 }
 
 // Len returns the number of elements in the listbox.
@@ -80,6 +81,14 @@ func (box *ListBox[T]) SetAlign(align tinygl.TextAlign) {
 	}
 }
 
+// Set padding for each text child.
+func (box *ListBox[T]) SetPadding(horizontal, vertical int) {
+	for i := range box.children {
+		box.children[i].SetPadding(horizontal, vertical)
+	}
+	box.Rect.RequestUpdate()
+}
+
 // RequestUpdate will request an update for this object and all of its children.
 func (box *ListBox[T]) RequestUpdate() {
 	box.Rect.RequestUpdate()
@@ -95,32 +104,26 @@ func (box *ListBox[T]) Layout(x, y, width, height int) {
 		box.Rect.Layout(x, y, width, height)
 	}
 
-	box.layoutChildren(x, y, width, height)
-
-	numRows := (len(box.children) + int(box.numCols) - 1) / int(box.numCols)
-	box.slack = int16(height - int(box.textHeight)*numRows)
-	if box.slack > 0 {
-		// More of the extra space at the end is exposed, so redraw that area.
-		// TODO: only redraw newly exposed area.
-		box.RequestUpdate()
+	commonChildHeight := 0
+	if len(box.children) != 0 {
+		firstChild := &box.children[0]
+		_, commonChildHeight = firstChild.MinSize()
 	}
-}
 
-func (box *ListBox[T]) layoutChildren(x, y, width, height int) {
 	colIndex := 0
 	rowIndex := 0
 	remainingWidth := width
 	for i := range box.children {
 		child := &box.children[i]
-		childHeight := int(box.textHeight)
-		if (rowIndex+1)*int(box.textHeight) > height {
-			childHeight = height - rowIndex*int(box.textHeight)
+		childHeight := commonChildHeight
+		if (rowIndex+1)*commonChildHeight > height {
+			childHeight = height - rowIndex*commonChildHeight
 		}
 		if childHeight < 0 {
 			childHeight = 0
 		}
 		childWidth := remainingWidth / (int(box.numCols) - colIndex)
-		child.Layout(x+width-remainingWidth, y+rowIndex*int(box.textHeight), childWidth, childHeight)
+		child.Layout(x+width-remainingWidth, y+rowIndex*commonChildHeight, childWidth, childHeight)
 		remainingWidth -= childWidth
 
 		colIndex++
@@ -148,9 +151,42 @@ func (box *ListBox[T]) Update(screen *tinygl.Screen[T]) {
 		}
 	}
 
-	if needsUpdate && box.slack > 0 {
+	// Draw the area below the children.
+	if needsUpdate {
 		displayX, displayY, displayWidth, displayHeight := box.Rect.Bounds()
-		tinygl.PaintSolidColor(screen, box.Background(), displayX, displayY+displayHeight-int(box.slack), displayWidth, int(box.slack))
+		if len(box.children) == 0 {
+			tinygl.PaintSolidColor(screen, box.Background(), displayX, displayY, displayWidth, displayHeight)
+		} else {
+			childX, childY, childWidth, childHeight := box.children[len(box.children)-1].Bounds()
+			if childX+childWidth < displayX+displayWidth {
+				// This is a grid, with some extra space at the end.
+				// Like the area below indicated with "*":
+				//
+				//    #  #  #
+				//    #  #  #
+				//    #  *  *
+				//    -  -  -
+				paintX := childX + childWidth
+				paintY := childY
+				paintWidth := (displayX + displayWidth) - (childX + childWidth)
+				paintHeight := childHeight
+				tinygl.PaintSolidColor(screen, box.Background(), paintX, paintY, paintWidth, paintHeight)
+			}
+			if childY+childHeight < displayY+displayHeight {
+				// This is the remaining area below the children.
+				// Like the area indicated with "-":
+				//
+				//    #  #  #
+				//    #  #  #
+				//    #  *  *
+				//    -  -  -
+				paintX := displayX
+				paintY := childY + childHeight
+				paintWidth := displayWidth
+				paintHeight := (displayY + displayHeight) - (childY + childHeight)
+				tinygl.PaintSolidColor(screen, box.Background(), paintX, paintY, paintWidth, paintHeight)
+			}
+		}
 	}
 }
 
