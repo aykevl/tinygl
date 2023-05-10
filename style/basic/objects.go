@@ -57,7 +57,8 @@ func (box *ListBox[T]) MinSize() (width, height int) {
 	}
 	firstChild := &box.children[0]
 	_, childHeight := firstChild.MinSize()
-	return 0, childHeight * len(box.children)
+	numRows := (len(box.children) + int(box.numCols) - 1) / int(box.numCols)
+	return 0, childHeight * numRows
 }
 
 // Len returns the number of elements in the listbox.
