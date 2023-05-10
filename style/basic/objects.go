@@ -25,6 +25,7 @@ type ListBox[T pixel.Color] struct {
 	foreground T
 	tint       T
 	textHeight int8
+	numCols    uint8 // number of columns, to make it a grid
 }
 
 // Create a new listbox with the given elements. The elements (and number of
@@ -40,6 +41,7 @@ func (theme *Basic[T]) NewListBox(elements []string) *ListBox[T] {
 		selected:   -1,
 		foreground: theme.Foreground,
 		tint:       theme.Tint,
+		numCols:    1,
 	}
 	for i, text := range elements {
 		child := &children[i]
@@ -54,6 +56,22 @@ func (theme *Basic[T]) NewListBox(elements []string) *ListBox[T] {
 // Len returns the number of elements in the listbox.
 func (box *ListBox[T]) Len() int {
 	return len(box.children)
+}
+
+// SetColumns splits the view into multiple columns, so that elements can also
+// display horizontally.
+func (box *ListBox[T]) SetColumns(columns int) {
+	if columns < 1 {
+		columns = 1
+	}
+	box.numCols = uint8(columns)
+}
+
+// SetAlign sets the alignment of all text children.
+func (box *ListBox[T]) SetAlign(align tinygl.TextAlign) {
+	for i := range box.children {
+		box.children[i].SetAlign(align)
+	}
 }
 
 // RequestUpdate will request an update for this object and all of its children.
@@ -73,7 +91,8 @@ func (box *ListBox[T]) Layout(x, y, width, height int) {
 
 	box.layoutChildren(x, y, width, height)
 
-	box.slack = int16(height - int(box.textHeight)*len(box.children))
+	numRows := (len(box.children) + int(box.numCols) - 1) / int(box.numCols)
+	box.slack = int16(height - int(box.textHeight)*numRows)
 	if box.slack > 0 {
 		// More of the extra space at the end is exposed, so redraw that area.
 		// TODO: only redraw newly exposed area.
@@ -82,16 +101,29 @@ func (box *ListBox[T]) Layout(x, y, width, height int) {
 }
 
 func (box *ListBox[T]) layoutChildren(x, y, width, height int) {
+	colIndex := 0
+	rowIndex := 0
+	remainingWidth := width
 	for i := range box.children {
 		child := &box.children[i]
 		childHeight := int(box.textHeight)
-		if (i+1)*int(box.textHeight) > height {
-			childHeight = height - i*int(box.textHeight)
+		if (rowIndex+1)*int(box.textHeight) > height {
+			childHeight = height - rowIndex*int(box.textHeight)
 		}
 		if childHeight < 0 {
 			childHeight = 0
 		}
-		child.Layout(x, y+i*int(box.textHeight), width, childHeight)
+		childWidth := remainingWidth / (int(box.numCols) - colIndex)
+		child.Layout(x+width-remainingWidth, y+rowIndex*int(box.textHeight), childWidth, childHeight)
+		remainingWidth -= childWidth
+
+		colIndex++
+		if colIndex >= int(box.numCols) {
+			// Wrap again back to start.
+			colIndex = 0
+			rowIndex++
+			remainingWidth = width
+		}
 	}
 }
 
@@ -152,9 +184,11 @@ func (box *ListBox[T]) HandleEvent(event tinygl.Event, x, y int) {
 	if box.handler == nil {
 		return
 	}
-	_, displayY, _, _ := box.Bounds()
-	childIndex := (y - displayY) / int(box.textHeight)
-	if childIndex >= 0 && childIndex < len(box.children) {
-		box.handler(event, childIndex)
+	for i, child := range box.children {
+		childX, childY, childW, childH := child.Bounds()
+		if childX <= x && childY <= y && childX+childW > x && childY+childH > y {
+			box.handler(event, i)
+			break
+		}
 	}
 }
