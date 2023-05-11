@@ -77,7 +77,7 @@ func (t *Text[T]) align() TextAlign {
 // Set horizontal and vertical padding in screen pixels. The padding must be a
 // positive integer that is less than 128.
 func (t *Text[T]) SetPadding(horizontal, vertical int) {
-	t.extra = (t.extra & 0xfffc) | uint16(horizontal&0x7f)<<2 | uint16(vertical&0x7f)<<9
+	t.extra = (t.extra & 0x0003) | uint16(horizontal&0x7f)<<2 | uint16(vertical&0x7f)<<9
 
 	t.RequestLayout()
 }
