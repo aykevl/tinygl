@@ -158,16 +158,6 @@ func (r *Rect[T]) growable() (x, y int) {
 	return int(r.grow & 0x0f), int(r.grow&0xf0) >> 4
 }
 
-func (r *Rect[T]) Update(screen *Screen[T]) {
-	if r.flags&flagNeedsUpdate == 0 || r.displayWidth == 0 || r.displayHeight == 0 {
-		return // nothing to do
-	}
-
-	PaintSolidColor(screen, r.background, int(r.displayX), int(r.displayY), int(r.displayWidth), int(r.displayHeight))
-
-	r.flags &^= flagNeedsUpdate
-}
-
 // HandleEvent handles input events like touch taps.
 func (r *Rect[T]) HandleEvent(event Event, x, y int) {
 	// The base object doesn't handle any events.
