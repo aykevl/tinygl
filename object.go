@@ -27,7 +27,7 @@ type Object[T pixel.Color] interface {
 
 	// Called when adding a child to a parent. Should only ever be called during
 	// the construction of a container object.
-	SetParent(object Object[T])
+	SetParent(object *Rect[T])
 
 	// Minimal width and height of an object.
 	MinSize() (width, height int)
@@ -54,7 +54,7 @@ const (
 )
 
 type Rect[T pixel.Color] struct {
-	parent Object[T]
+	parent *Rect[T]
 
 	displayX      int16 // "display" pixels are physical pixels
 	displayY      int16
@@ -73,7 +73,7 @@ func MakeRect[T pixel.Color](background T) Rect[T] {
 	}
 }
 
-func (r *Rect[T]) SetParent(parent Object[T]) {
+func (r *Rect[T]) SetParent(parent *Rect[T]) {
 	if r.parent != nil {
 		panic("SetParent: already set")
 	}

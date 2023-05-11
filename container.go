@@ -15,7 +15,7 @@ func NewVBox[T pixel.Color](background T, children ...Object[T]) *VBox[T] {
 	box.children = children
 
 	for _, child := range children {
-		child.SetParent(box)
+		child.SetParent(&box.Rect)
 	}
 
 	box.Rect.background = background
