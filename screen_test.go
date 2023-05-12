@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -122,9 +123,23 @@ type ImageDisplay struct {
 }
 
 func NewImageDisplay(width, height int) ImageDisplay {
-	return ImageDisplay{
+	// Create a new image, initialized with random data (to make non-drawn areas
+	// very obvious).
+	img := ImageDisplay{
 		image: image.NewNRGBA(image.Rect(0, 0, width, height)),
 	}
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			r := rand.Uint32()
+			c := color.RGBA{
+				R: uint8(r >> 0),
+				G: uint8(r >> 8),
+				B: uint8(r >> 16),
+			}
+			img.image.Set(x, y, c)
+		}
+	}
+	return img
 }
 
 func (img ImageDisplay) Size() (int16, int16) {
