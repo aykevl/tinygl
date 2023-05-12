@@ -14,8 +14,8 @@ type Canvas[T pixel.Color] struct {
 	tinygl.Rect[T]
 	minWidth     int16
 	minHeight    int16
-	blocksWidth  int16
-	blocksHeight int16
+	canvasWidth  int16
+	canvasHeight int16
 	dirty        []byte
 	objects      []Object[T]
 	eventHandler func(tinygl.Event, int, int)
@@ -36,22 +36,23 @@ func (c *Canvas[T]) MinSize() (width, height int) {
 	return int(c.minWidth), int(c.minHeight)
 }
 
+// Size returns the current canvas size, as updated after the first layout.
+func (c *Canvas[T]) Size() (width, height int) {
+	return int(c.canvasWidth), int(c.canvasHeight)
+}
+
 // Layout implements tinygl.Object.
-func (c *Canvas[T]) Layout(x, y, width, height int) {
-	displayX, displayY, displayWidth, displayHeight := c.Rect.Bounds()
-	if x != displayX || y != displayY || width != displayWidth || height != displayHeight {
-		c.Rect.Layout(x, y, width, height)
-		numBlocksWidth := (width + blockSize - 1) / blockSize
-		numBlocksHeight := (height + blockSize - 1) / blockSize
-		if numBlocksWidth != int(c.blocksWidth) || numBlocksHeight != int(c.blocksHeight) {
-			c.blocksWidth = int16(numBlocksWidth)
-			c.blocksHeight = int16(numBlocksHeight)
-			numBlocks := numBlocksWidth * numBlocksHeight
-			dirtyBytes := (numBlocks + 8 - 1) / 8
-			// Note: for canvases that frequently change size, it might be
-			// worthwhile to grow/shrink the slice as needed.
-			c.dirty = make([]byte, dirtyBytes)
-		}
+func (c *Canvas[T]) Layout(width, height int) {
+	numBlocksWidth := (width + blockSize - 1) / blockSize
+	numBlocksHeight := (height + blockSize - 1) / blockSize
+	if width != int(c.canvasWidth) || height != int(c.canvasHeight) {
+		c.canvasWidth = int16(width)
+		c.canvasHeight = int16(height)
+		numBlocks := numBlocksWidth * numBlocksHeight
+		dirtyBytes := (numBlocks + 8 - 1) / 8
+		// Note: for canvases that frequently change size, it might be
+		// worthwhile to grow/shrink the slice as needed.
+		c.dirty = make([]byte, dirtyBytes)
 		// Mark all blocks on the canvas as needing an update.
 		for i := range c.dirty {
 			c.dirty[i] = 0xff
@@ -60,22 +61,35 @@ func (c *Canvas[T]) Layout(x, y, width, height int) {
 }
 
 // Update implements tinygl.Object.
-func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
+func (c *Canvas[T]) Update(screen *tinygl.Screen[T], displayX, displayY, displayWidth, displayHeight, x, y int) {
 	if this, _ := c.NeedsUpdate(); !this { // check the needsUpdate flag
 		return
 	}
 	// needsUpdate flag is cleared
 
 	// Go through all the tiles and update those that changed.
-	x, y, _, canvasHeight := c.Bounds()
-	for blockY := 0; blockY < int(c.blocksHeight); blockY++ {
+	drawX0 := x
+	drawY0 := y
+	drawX1 := x + displayWidth
+	drawY1 := y + displayHeight
+	blockX0 := (drawX0 + blockSize - 1) / blockSize
+	blockY0 := (drawY0 + blockSize - 1) / blockSize
+	blockX1 := (drawX1 + blockSize - 1) / blockSize
+	blockY1 := (drawY1 + blockSize - 1) / blockSize
+	for blockY := blockY0; blockY < blockY1; blockY++ {
+		// TODO: don't just limit the block height, also respect the other 3
+		// sides.
 		blockHeight := blockSize
-		if (blockY+1)*blockSize >= canvasHeight {
-			blockHeight = canvasHeight - (blockY * blockSize)
+		blockMaxHeight := drawY1 - blockY*blockSize
+		if blockHeight > blockMaxHeight {
+			blockHeight = blockMaxHeight
+		}
+		if blockHeight <= 0 {
+			panic("unreachable?")
 		}
 		buf := screen.Buffer()
 		maxBlocksPerRow := buf.Len() / (blockSize * blockHeight)
-		for blockX := 0; blockX < int(c.blocksWidth); blockX++ {
+		for blockX := blockX0; blockX < blockX1; blockX++ {
 			// Note: could be sped up by checking whole bytes at a time.
 			if !c.isDirty(blockX, blockY) {
 				continue
@@ -88,7 +102,7 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 			// same time.
 			numBlocks := 1
 			for {
-				if numBlocks >= maxBlocksPerRow || blockX+numBlocks >= int(c.blocksWidth) {
+				if numBlocks >= maxBlocksPerRow || blockX+numBlocks >= blockX1 {
 					break
 				}
 				if !c.isDirty(blockX+numBlocks, blockY) {
@@ -104,7 +118,7 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T]) {
 			for _, obj := range c.objects {
 				obj.Draw(blockX*blockSize, blockY*blockSize, img)
 			}
-			screen.Send(x+blockX*blockSize, y+blockY*blockSize, img)
+			screen.Send(displayX-x+blockX*blockSize, displayY-y+blockY*blockSize, img)
 		}
 	}
 }
@@ -120,45 +134,52 @@ func (c *Canvas[T]) HandleEvent(event tinygl.Event, x, y int) {
 	if c.eventHandler == nil {
 		return
 	}
-	displayX, displayY, _, _ := c.Bounds()
-	c.eventHandler(event, x-displayX, y-displayY)
+	c.eventHandler(event, x, y)
 }
 
 func (c *Canvas[T]) isDirty(blockX, blockY int) bool {
-	blockNum := blockY*int(c.blocksWidth) + blockX
+	blockNum := blockY*((int(c.canvasWidth)+blockSize-1)/blockSize) + blockX
 	return c.dirty[blockNum/8]&(1<<(blockNum%8)) != 0
 }
 
 func (c *Canvas[T]) clearDirty(blockX, blockY int) {
-	blockNum := blockY*int(c.blocksWidth) + blockX
+	blockNum := blockY*((int(c.canvasWidth)+blockSize-1)/blockSize) + blockX
 	c.dirty[blockNum/8] &^= (1 << (blockNum % 8))
 }
 
 func (c *Canvas[T]) setDirty(blockX, blockY int) {
-	blockNum := blockY*int(c.blocksWidth) + blockX
+	blockNum := blockY*((int(c.canvasWidth)+blockSize-1)/blockSize) + blockX
 	c.dirty[blockNum/8] |= (1 << (blockNum % 8))
 }
 
 // markDirty marks all tiles in the given rectangle as dirty.
 func (c *Canvas[T]) markDirty(x, y, width, height int) {
+	if x < 0 {
+		width -= x
+		x = 0
+	}
+	if y < 0 {
+		height -= y
+		y = 0
+	}
+	if x+width > int(c.canvasWidth) {
+		width = int(c.canvasWidth) - x
+	}
+	if y+height > int(c.canvasHeight) {
+		height = int(c.canvasHeight) - y
+	}
+	if width == 0 || height == 0 {
+		return
+	}
 	startX := x / blockSize
 	startY := y / blockSize
 	stopX := (x + width + blockSize - 1) / blockSize
 	stopY := (y + height + blockSize - 1) / blockSize
-	if stopX < 0 || stopY < 0 || startX >= int(c.blocksWidth) || startY >= int(c.blocksHeight) {
-		return // out of range
-	}
 	if startX < 0 {
 		startX = 0
 	}
 	if startY < 0 {
 		startY = 0
-	}
-	if stopX >= int(c.blocksWidth) {
-		stopX = int(c.blocksWidth)
-	}
-	if stopY >= int(c.blocksHeight) {
-		stopY = int(c.blocksHeight)
 	}
 
 	for blockY := startY; blockY < stopY; blockY++ {

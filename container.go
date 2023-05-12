@@ -6,20 +6,21 @@ import (
 
 type VBox[T pixel.Color] struct {
 	Rect[T]
-	children []Object[T]
-	slack    int16
+	children     []Object[T]
+	childHeights []int16
 }
 
 func NewVBox[T pixel.Color](background T, children ...Object[T]) *VBox[T] {
 	box := &VBox[T]{}
 	box.children = children
+	box.childHeights = make([]int16, len(children))
 
 	for _, child := range children {
 		child.SetParent(&box.Rect)
 	}
 
 	box.Rect.background = background
-	box.flags |= flagNeedsUpdate
+	box.flags |= flagNeedsLayout | flagNeedsChildLayout | flagNeedsUpdate | flagNeedsChildUpdate
 	return box
 }
 
@@ -44,16 +45,9 @@ func (b *VBox[T]) MinSize() (width, height int) {
 	return
 }
 
-func (b *VBox[T]) Layout(x, y, width, height int) {
-	hasRectChange := x != int(b.displayX) || y != int(b.displayY) || width != int(b.displayWidth) || height != int(b.displayHeight)
-	if !hasRectChange && b.flags&(flagNeedsLayout|flagNeedsChildLayout) == 0 {
+func (b *VBox[T]) Layout(width, height int) {
+	if b.flags&(flagNeedsLayout|flagNeedsChildLayout) == 0 {
 		return // nothing to do
-	}
-	if hasRectChange {
-		b.displayX = int16(x)
-		b.displayY = int16(y)
-		b.displayWidth = int16(width)
-		b.displayHeight = int16(height)
 	}
 
 	// Determine minimal size of all children.
@@ -66,50 +60,73 @@ func (b *VBox[T]) Layout(x, y, width, height int) {
 		growableSum += childGrowable
 	}
 
-	// Go through each child and determine its position and size.
+	// Go through each child and determine its size.
 	// The 'leftover' parts are the extra pixels at the bottom of the VBox.
 	leftoverHeight := height - minHeightSum
 	leftoverGrowable := growableSum
 	if leftoverHeight < 0 {
 		leftoverHeight = 0 // don't shrink children when the VBox is full
 	}
-	childY := y
-	for _, child := range b.children {
+	childY := 0 // Y relative to the VBox start
+	previousChildY := 0
+	for i, child := range b.children {
+		// Determine child size.
 		_, childGrowable := child.growable()
-		childHeight := 0
-		if childY < y+height {
-			_, childHeight = child.MinSize()
-			if childGrowable != 0 {
-				growPixels := leftoverHeight * childGrowable / leftoverGrowable
-				childHeight += growPixels
-				leftoverHeight -= growPixels
-				leftoverGrowable -= childGrowable
-			}
+		_, childHeight := child.MinSize()
+		if childGrowable != 0 {
+			growPixels := leftoverHeight * childGrowable / leftoverGrowable
+			childHeight += growPixels
+			leftoverHeight -= growPixels
+			leftoverGrowable -= childGrowable
 		}
-		child.Layout(x, childY, width, childHeight)
+		child.Layout(width, childHeight)
+
+		// Check whether the child changed position or size.
+		if childHeight != int(b.childHeights[i]) || childY != previousChildY {
+			child.RequestUpdate()
+		}
+
+		// Keep track of the child height.
+		previousChildY += int(b.childHeights[i])
 		childY += childHeight
+		b.childHeights[i] = int16(childHeight)
 	}
-	b.slack = int16(leftoverHeight)
-	if leftoverHeight > 0 {
-		// More of the extra space at the end is exposed, so redraw that area.
-		// TODO: only redraw newly exposed area.
-		b.flags |= flagNeedsUpdate
+	if childY != previousChildY && leftoverHeight != 0 {
+		// Redraw the area at the bottom of the VBox (the "slack").
+		b.Rect.RequestUpdate()
 	}
 	b.flags &^= flagNeedsLayout | flagNeedsChildLayout
 }
 
-func (b *VBox[T]) Update(screen *Screen[T]) {
+func (b *VBox[T]) Update(screen *Screen[T], displayX, displayY, displayWidth, displayHeight, x, y int) {
 	if b.flags&(flagNeedsUpdate|flagNeedsChildUpdate) == 0 {
 		return
 	}
 
-	// TODO: combine multiple children in a single buffer if possible
-	for _, child := range b.children {
-		child.Update(screen)
+	childOffset := 0
+	for i, child := range b.children {
+		childHeight := int(b.childHeights[i])
+		childDisplayY := displayY - y + childOffset
+		childY := 0
+		if childDisplayY < displayY {
+			childDisplayY = displayY
+			childY = displayY - childDisplayY
+		}
+		childDisplayHeight := int(b.childHeights[i])
+		if childDisplayY+childDisplayHeight > displayY+displayHeight {
+			childDisplayHeight = (displayY + displayHeight) - childDisplayY
+		}
+		if childDisplayHeight > 0 {
+			child.Update(screen, displayX, childDisplayY, displayWidth, childDisplayHeight, x, childY)
+		}
+		childOffset += childHeight
 	}
 
-	if b.flags&flagNeedsUpdate != 0 && b.slack != 0 {
-		PaintSolidColor(screen, b.background, int(b.displayX), int(b.displayY)+int(b.displayHeight)-int(b.slack), int(b.displayWidth), int(b.slack))
+	slackTop := displayY - y + childOffset
+	slackBottom := displayY + displayHeight
+	slackHeight := slackBottom - slackTop
+	if b.flags&flagNeedsUpdate != 0 && slackHeight > 0 {
+		PaintSolidColor(screen, b.background, displayX, slackTop, displayWidth, slackHeight)
 	}
 
 	b.flags &^= flagNeedsUpdate | flagNeedsChildUpdate // updated, so no need to redraw next time
@@ -117,12 +134,13 @@ func (b *VBox[T]) Update(screen *Screen[T]) {
 
 // HandleEvent propagates an event to its children.
 func (b *VBox[T]) HandleEvent(event Event, x, y int) {
-	for _, child := range b.children {
-		childX, childY, childWidth, childHeight := child.Bounds()
-		if x < childX || y < childY || x >= childX+childWidth || y >= childY+childHeight {
-			continue
+	childY := 0
+	for i, child := range b.children {
+		childHeight := b.childHeights[i]
+		if y >= childY && y < childY+int(childHeight) {
+			child.HandleEvent(event, x, y-childY)
 		}
-		child.HandleEvent(event, x, y)
+		childY += int(childHeight)
 	}
 }
 

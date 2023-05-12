@@ -15,12 +15,18 @@ type Object[T pixel.Color] interface {
 
 	// Layout the object in the provided area. The object will take up all the
 	// given area (if needed, by filling in the rest with its background color).
-	Layout(x, y, width, height int)
+	Layout(width, height int)
 
 	// Update the screen if needed. It recurses into children, if the object has
 	// any. The object will typically mark itself as having finished updating so
 	// another call to Update() won't send any new data to the display.
-	Update(screen *Screen[T])
+	// The displayX, displayY, displayWidth, and displayHeight parameters are
+	// the area of the display that needs to be updated. The width and height
+	// must never be zero.
+	// The x and y parameter are the offset from the start of the object, which
+	// can be zero or positive. They can be positive when the parent is a scroll
+	// container, for example.
+	Update(screen *Screen[T], displayX, displayY, displayWidth, displayHeight, x, y int)
 
 	// Handle some event (usually, touch events).
 	HandleEvent(event Event, x, y int)
@@ -31,9 +37,6 @@ type Object[T pixel.Color] interface {
 
 	// Minimal width and height of an object.
 	MinSize() (width, height int)
-
-	// Display rect used by this object.
-	Bounds() (x, y, width, height int)
 
 	// Grow factor in horizontal and vertical direction. Space that is left over
 	// in a container, is spread over the children according to this factor.
@@ -54,15 +57,10 @@ const (
 )
 
 type Rect[T pixel.Color] struct {
-	parent *Rect[T]
-
-	displayX      int16 // "display" pixels are physical pixels
-	displayY      int16
-	displayWidth  int16
-	displayHeight int16
-	background    T
-	flags         objectFlag
-	grow          uint8 // two 4-bit values (0..15), X is the lower 4 bits and Y the upper 4 bits
+	parent     *Rect[T]
+	background T
+	flags      objectFlag
+	grow       uint8 // two 4-bit values (0..15), X is the lower 4 bits and Y the upper 4 bits
 }
 
 // MakeRect returns a new initialized Rect object. This is mostly useful to
@@ -70,6 +68,7 @@ type Rect[T pixel.Color] struct {
 func MakeRect[T pixel.Color](background T) Rect[T] {
 	return Rect[T]{
 		background: background,
+		flags:      flagNeedsUpdate | flagNeedsLayout,
 	}
 }
 
@@ -83,11 +82,6 @@ func (r *Rect[T]) SetParent(parent *Rect[T]) {
 // Background returns the current background for this object.
 func (r *Rect[T]) Background() T {
 	return r.background
-}
-
-// Bounds returns the area on the display that is being used by this rectangle.
-func (r *Rect[T]) Bounds() (int, int, int, int) {
-	return int(r.displayX), int(r.displayY), int(r.displayWidth), int(r.displayHeight)
 }
 
 func (r *Rect[T]) RequestUpdate() {
@@ -118,6 +112,15 @@ func (r *Rect[T]) requestChildLayout() {
 	}
 }
 
+// NeedsLayout returns whether this object and/or child object needs to be
+// re-layout, and clears the layout flag at the same time.
+func (r *Rect[T]) NeedsLayout() (this, child bool) {
+	this = r.flags&flagNeedsLayout != 0
+	child = r.flags&flagNeedsChildLayout != 0
+	r.flags &^= (flagNeedsLayout | flagNeedsChildLayout)
+	return this, child
+}
+
 // NeedsUpdate returns whether this object and/or a child object needs an
 // update, and clears the update flag at the same time.
 func (r *Rect[T]) NeedsUpdate() (this, child bool) {
@@ -125,17 +128,6 @@ func (r *Rect[T]) NeedsUpdate() (this, child bool) {
 	child = r.flags&flagNeedsChildUpdate != 0
 	r.flags &^= (flagNeedsUpdate | flagNeedsChildUpdate)
 	return this, child
-}
-
-func (r *Rect[T]) Layout(x, y, width, height int) {
-	if int(r.displayX) != x || int(r.displayY) != y || int(r.displayWidth) != width || int(r.displayHeight) != height || r.flags&flagNeedsLayout != 0 {
-		r.displayX = int16(x)
-		r.displayY = int16(y)
-		r.displayWidth = int16(width)
-		r.displayHeight = int16(height)
-		r.RequestUpdate()
-		r.flags &^= flagNeedsLayout
-	}
 }
 
 // SetGrowable sets the grow factor in the horizontal and vertical direction.

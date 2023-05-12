@@ -71,7 +71,7 @@ func (s *Screen[T]) SetChild(child Object[T]) {
 // doing further initialization, for example when drawing on a canvas.
 func (s *Screen[T]) Layout() {
 	width, height := s.display.Size()
-	s.child.Layout(0, 0, int(width), int(height))
+	s.child.Layout(int(width), int(height))
 }
 
 // Update sends all changes in the screen to the (hardware) display.
@@ -83,7 +83,8 @@ func (s *Screen[T]) Update() error {
 		start = time.Now()
 	}
 	s.Layout()
-	s.child.Update(s)
+	width, height := s.display.Size()
+	s.child.Update(s, 0, 0, int(width), int(height), 0, 0)
 	if showStats {
 		duration := time.Since(start)
 		println("sent", s.statPixels, "bytes using", s.statBuffers, "buffers in", duration.String())
