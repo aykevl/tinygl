@@ -20,7 +20,7 @@ func NewVBox[T pixel.Color](background T, children ...Object[T]) *VBox[T] {
 	}
 
 	box.Rect.background = background
-	box.flags |= flagNeedsLayout | flagNeedsChildLayout | flagNeedsUpdate | flagNeedsChildUpdate
+	box.flags |= flagNeedsLayout | flagNeedsUpdate | flagNeedsChildUpdate
 	return box
 }
 
@@ -46,7 +46,7 @@ func (b *VBox[T]) MinSize() (width, height int) {
 }
 
 func (b *VBox[T]) Layout(width, height int) {
-	if b.flags&(flagNeedsLayout|flagNeedsChildLayout) == 0 {
+	if b.flags&flagNeedsLayout == 0 {
 		return // nothing to do
 	}
 
@@ -95,7 +95,7 @@ func (b *VBox[T]) Layout(width, height int) {
 		// Redraw the area at the bottom of the VBox (the "slack").
 		b.Rect.RequestUpdate()
 	}
-	b.flags &^= flagNeedsLayout | flagNeedsChildLayout
+	b.flags &^= flagNeedsLayout
 }
 
 func (b *VBox[T]) Update(screen *Screen[T], displayX, displayY, displayWidth, displayHeight, x, y int) {

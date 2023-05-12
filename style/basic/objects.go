@@ -101,7 +101,7 @@ func (box *ListBox[T]) RequestUpdate() {
 
 // Layout implements tinygl.Object.
 func (box *ListBox[T]) Layout(width, height int) {
-	if needsLayout, _ := box.NeedsLayout(); !needsLayout {
+	if !box.NeedsLayout() {
 		return
 	}
 

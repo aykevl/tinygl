@@ -53,7 +53,6 @@ const (
 	flagNeedsUpdate      objectFlag = 1 << iota // whether the element needs to have a full redraw
 	flagNeedsChildUpdate                        // one of the children needs an update (but not necessarily the object itself)
 	flagNeedsLayout                             // this object needs a re-layout
-	flagNeedsChildLayout                        // one of the children of this object needs a re-layout
 )
 
 type Rect[T pixel.Color] struct {
@@ -106,19 +105,18 @@ func (r *Rect[T]) RequestLayout() {
 }
 
 func (r *Rect[T]) requestChildLayout() {
-	r.flags |= flagNeedsChildLayout
+	r.flags |= flagNeedsLayout
 	if r.parent != nil {
 		r.parent.requestChildLayout()
 	}
 }
 
-// NeedsLayout returns whether this object and/or child object needs to be
-// re-layout, and clears the layout flag at the same time.
-func (r *Rect[T]) NeedsLayout() (this, child bool) {
-	this = r.flags&flagNeedsLayout != 0
-	child = r.flags&flagNeedsChildLayout != 0
-	r.flags &^= (flagNeedsLayout | flagNeedsChildLayout)
-	return this, child
+// NeedsLayout returns whether this object needs to be re-layout, and clears the
+// layout flag at the same time.
+func (r *Rect[T]) NeedsLayout() (needsLayout bool) {
+	needsLayout = r.flags&flagNeedsLayout != 0
+	r.flags &^= flagNeedsLayout
+	return
 }
 
 // NeedsUpdate returns whether this object and/or a child object needs an
