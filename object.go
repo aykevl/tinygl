@@ -7,11 +7,9 @@ import (
 type Object[T pixel.Color] interface {
 	// Request an update to this object (that doesn't change the layout).
 	RequestUpdate()
-	requestChildUpdate()
 
 	// Request a re-layout of this object.
 	RequestLayout()
-	requestChildLayout()
 
 	// Layout the object in the provided area. The object will take up all the
 	// given area (if needed, by filling in the rest with its background color).
