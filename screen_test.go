@@ -37,7 +37,7 @@ func TestScreen(t *testing.T) {
 
 func makeScreen[T pixel.Color](img ImageDisplay) *tinygl.Screen[T] {
 	buf := pixel.NewImage[T](160, 8)
-	screen := tinygl.NewScreen(img, buf, 47) // 120PPI ≈ 47px/cm
+	screen := tinygl.NewScreen(img, buf, 120) // 120PPI
 	return screen
 }
 
