@@ -26,9 +26,11 @@ func (s *Screen[T]) SetTouchState(x, y int16) {
 			s.child.HandleEvent(TouchStart, int(x), int(y))
 		} else if s.touchEvent == TouchTap {
 			// Continuing touch event.
-			if abs(int(s.touchX)-int(x)) > int(s.ppi)/4 || abs(int(s.touchY)-int(y)) > int(s.ppi)/4 {
-				// The touch point moved more than ¼inch or 0.635mm. Treat it as
-				// a move event.
+			if int(s.touchX) != int(x) || int(s.touchY) != int(y) {
+				// The touch point moved. Treat it as a move event.
+				// The caller is responsible for implementing some form of
+				// hysteresis to detect actual movement instead of just ADC
+				// noise.
 				s.touchEvent = TouchMove
 				s.child.HandleEvent(TouchMove, int(x), int(y))
 			}
