@@ -144,6 +144,121 @@ func (b *VBox[T]) HandleEvent(event Event, x, y int) {
 	}
 }
 
+// ScrollBox is a scrollable wrapper of an object.
+// It is growable and reports a minimal size of (0, 0) to the parent, so that it
+// will take up the remaining space in the parent box.
+type ScrollBox[T pixel.Color] struct {
+	child      Object[T]
+	offsetX    int
+	offsetY    int
+	maxOffsetX int
+	maxOffsetY int
+	lastTouchX int16
+	lastTouchY int16
+}
+
+// NewScrollBox returns an initialized scroll box with the given child.
+// If you want to scroll multiple children (vertically, for example), you can
+// use a VBox instead.
+func NewScrollBox[T pixel.Color](child Object[T]) *ScrollBox[T] {
+	return &ScrollBox[T]{
+		child: child,
+	}
+}
+
+func (b *ScrollBox[T]) MinSize() (width, height int) {
+	// A scroll area should be set to expand.
+	return 0, 0
+}
+
+func (b *ScrollBox[T]) growable() (horizontal, vertical int) {
+	// A scroll box is always growable.
+	return 1, 1
+}
+
+func (b *ScrollBox[T]) SetGrowable(horizontal, vertical int) {
+	// No-op, because the scroll area is always growable.
+}
+
+func (b *ScrollBox[T]) Layout(width, height int) {
+	// Allow the child to use its entire MinSize if it wants to (stretching it
+	// to the parent object if needed).
+	minWidth, minHeight := b.child.MinSize()
+	if width < minWidth {
+		b.maxOffsetX = minWidth - width
+		width = minWidth
+	} else {
+		b.maxOffsetX = 0
+	}
+	if height < minHeight {
+		b.maxOffsetY = minHeight - height
+		height = minHeight
+	} else {
+		b.maxOffsetY = 0
+	}
+	b.child.Layout(width, height)
+}
+
+func (b *ScrollBox[T]) Update(screen *Screen[T], displayX, displayY, displayWidth, displayHeight, x, y int) {
+	// Redraw the child (if needed) with an offset.
+	b.child.Update(screen, displayX, displayY, displayWidth, displayHeight, x+b.offsetX, y+b.offsetY)
+}
+
+func (b *ScrollBox[T]) HandleEvent(event Event, x, y int) {
+	switch event {
+	case TouchStart:
+		b.lastTouchX = int16(x)
+		b.lastTouchY = int16(y)
+	case TouchMove:
+		// Add the last distance moved to the offset.
+		offsetX := b.offsetX + (int(b.lastTouchX) - x)
+		if offsetX < 0 {
+			offsetX = 0
+		}
+		if offsetX > b.maxOffsetX {
+			offsetX = b.maxOffsetX
+		}
+		offsetY := b.offsetY + (int(b.lastTouchY) - y)
+		if offsetY < 0 {
+			offsetY = 0
+		}
+		if offsetY > b.maxOffsetY {
+			offsetY = b.maxOffsetY
+		}
+		if offsetX != b.offsetX || offsetY != b.offsetY {
+			// The offset changed, so redraw the child.
+			// One example where this does not happen, is when scrolling further
+			// than is possible in the scroll area. In that case, there is
+			// nothing to update as the child position didn't change even if the
+			// touch point changed.
+			// TODO: use hardware scrolling if available.
+			b.offsetX = offsetX
+			b.offsetY = offsetY
+			b.child.RequestUpdate()
+		}
+		b.lastTouchX = int16(x)
+		b.lastTouchY = int16(y)
+	case TouchTap:
+		// Pass tap events to the child (with the scroll offset).
+		b.child.HandleEvent(event, x+b.offsetX, y+b.offsetY)
+	}
+}
+
+func (b *ScrollBox[T]) RequestLayout() {
+	// Dummy forwarding call.
+	b.child.RequestLayout()
+}
+
+func (b *ScrollBox[T]) RequestUpdate() {
+	// Dummy forwarding call.
+	b.child.RequestUpdate()
+}
+
+func (b *ScrollBox[T]) SetParent(parent *Rect[T]) {
+	// Dummy forwarding call.
+	b.child.SetParent(parent)
+}
+
 // EventBox wraps an object and handles events for it.
 type EventBox[T pixel.Color] struct {
 	Object[T]
