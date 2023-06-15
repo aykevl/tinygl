@@ -5,6 +5,7 @@ import (
 	"unsafe"
 
 	"github.com/aykevl/tinygl/pixel"
+	"tinygo.org/x/drivers"
 )
 
 const showStats = false
@@ -14,18 +15,28 @@ type Displayer interface {
 	Size() (int16, int16)
 	DrawRGBBitmap8(x, y int16, data []byte, w, h int16) error
 	Display() error
+	Rotation() drivers.Rotation
+}
+
+type ScrollableDisplay interface {
+	Displayer
+	SetScrollArea(topFixedArea, bottomFixedArea int16)
+	SetScroll(line int16)
+	StopScroll()
 }
 
 type Screen[T pixel.Color] struct {
-	display     Displayer
-	child       Object[T]
-	buffer      pixel.Image[T]
-	statPixels  int
-	statBuffers uint16
-	ppi         int16
-	touchX      int16
-	touchY      int16
-	touchEvent  Event
+	display           Displayer
+	scrollableDisplay ScrollableDisplay
+	child             Object[T]
+	buffer            pixel.Image[T]
+	statPixels        int
+	statBuffers       uint16
+	ppi               int16
+	touchX            int16
+	touchY            int16
+	touchEvent        Event
+	scrolling         bool
 }
 
 // NewScreen creates a new screen to fill the whole display.
@@ -42,10 +53,12 @@ func NewScreen[T pixel.Color](display Displayer, buffer pixel.Image[T], ppi int)
 	if buffer.Len() < int(maxSize) {
 		panic("buffer too small")
 	}
+	hwscroll, _ := display.(ScrollableDisplay)
 	return &Screen[T]{
-		display: display,
-		buffer:  buffer,
-		ppi:     int16(ppi),
+		display:           display,
+		scrollableDisplay: hwscroll,
+		buffer:            buffer,
+		ppi:               int16(ppi),
 	}
 }
 
@@ -60,6 +73,13 @@ func (s *Screen[T]) Size() (width, height int) {
 func (s *Screen[T]) SetChild(child Object[T]) {
 	if child == s.child {
 		return // nothing to do
+	}
+	if s.scrolling {
+		// TODO: use StopScroll only after updating the child.
+		// This makes it possible to update the screen with a monochrome
+		// animation that hides the StopScroll flash.
+		s.scrollableDisplay.StopScroll()
+		s.scrolling = false
 	}
 	s.child = child
 	child.RequestUpdate()
@@ -118,6 +138,24 @@ func (s *Screen[T]) Send(x, y int, buffer pixel.Image[T]) {
 		duration := time.Since(start)
 		println("buffer send:", len(rawBuffer), duration.String())
 	}
+}
+
+func (s *Screen[T]) setScroll(topFixed, bottomFixed, line int16) bool {
+	if !s.scrolling {
+		if s.scrollableDisplay == nil {
+			return false // not scrollable
+		}
+		switch s.display.Rotation() {
+		case drivers.Rotation0, drivers.Rotation180:
+			// good
+		default:
+			return false // scrolls in the wrong direction
+		}
+		s.scrolling = true
+		s.scrollableDisplay.SetScrollArea(topFixed, bottomFixed)
+	}
+	s.scrollableDisplay.SetScroll(line)
+	return true
 }
 
 // Internal function. Do not use directly except in custom widgets.
