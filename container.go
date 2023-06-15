@@ -259,6 +259,252 @@ func (b *ScrollBox[T]) SetParent(parent *Rect[T]) {
 	b.child.SetParent(parent)
 }
 
+// VerticalScrollBox is a scrollable wrapper of an object that will use hardware
+// acceleration when available.
+// It is growable and reports a minimal size of (0, 0) to the parent, so that it
+// will take up the remaining space in the parent box.
+type VerticalScrollBox[T pixel.Color] struct {
+	Rect[T]
+	child            Object[T]
+	top              Object[T] // top fixed object, or nil
+	bottom           Object[T] // bottom fixed object, or nil
+	scrollOffset     int       // current distance from the top
+	lastScrollOffset int       // scroll offset in previous Update call
+	maxScrollOffset  int       // max value for scrollOffset
+	lastTouchY       int16
+	childHeight      int16
+	bottomHeight     int16
+	topHeight        int16
+}
+
+// NewVerticalScrollBox returns an initialized scroll box with the given child.
+// If you want to scroll multiple children (vertically, for example), you can
+// use a VBox to wrap these children.
+func NewVerticalScrollBox[T pixel.Color](top, child, bottom Object[T]) *VerticalScrollBox[T] {
+	return &VerticalScrollBox[T]{
+		top:    top,
+		child:  child,
+		bottom: bottom,
+	}
+}
+
+func (b *VerticalScrollBox[T]) MinSize() (width, height int) {
+	// The scroll area takes up whatever space the parent gives it.
+	var topH, bottomH int
+	if b.top != nil {
+		_, topH = b.top.MinSize()
+	}
+	if b.bottom != nil {
+		_, bottomH = b.bottom.MinSize()
+	}
+	return 0, topH + bottomH
+}
+
+func (b *VerticalScrollBox[T]) growable() (horizontal, vertical int) {
+	// A scroll box is always growable.
+	return 1, 1
+}
+
+func (b *VerticalScrollBox[T]) SetGrowable(horizontal, vertical int) {
+	// No-op, because the scroll area is always growable.
+}
+
+func (b *VerticalScrollBox[T]) Layout(width, height int) {
+	// Layout the top area.
+	if b.top != nil {
+		_, topH := b.top.MinSize()
+		if topH > height {
+			topH = height
+		}
+		if topH != int(b.topHeight) {
+			b.topHeight = int16(topH)
+			b.top.Layout(width, topH)
+			b.top.RequestUpdate()
+			b.child.RequestUpdate()
+		}
+		height -= topH
+	}
+
+	// Layout the bottom area.
+	if b.bottom != nil {
+		_, bottomH := b.bottom.MinSize()
+		if bottomH > height {
+			bottomH = height
+		}
+		if bottomH != int(b.bottomHeight) {
+			b.bottomHeight = int16(bottomH)
+			b.bottom.Layout(width, bottomH)
+			b.bottom.RequestUpdate()
+			b.child.RequestUpdate()
+		}
+		height -= bottomH
+	}
+
+	// Allow the child to use its entire MinSize if it wants to (stretching it
+	// to the parent object if needed).
+	_, childH := b.child.MinSize()
+	if childH > height {
+		b.maxScrollOffset = childH - height
+		childH = height
+	} else {
+		b.maxScrollOffset = 0
+	}
+	if childH != int(b.childHeight) {
+		b.childHeight = int16(childH)
+		b.child.Layout(width, height)
+		b.child.RequestUpdate()
+	}
+}
+
+func (b *VerticalScrollBox[T]) Update(screen *Screen[T], displayX, displayY, displayWidth, displayHeight, x, y int) {
+	// The code below assumes x and y are both 0.
+	if x != 0 || y != 0 {
+		panic("todo: x and y inside VerticalScrollBox")
+	}
+
+	// Draw fixed top area.
+	if b.top != nil {
+		b.top.Update(screen, displayX, displayY, displayWidth, int(b.topHeight), 0, 0)
+		displayY += int(b.topHeight)
+		displayHeight -= int(b.topHeight)
+	}
+
+	// Draw fixed bottom area.
+	if b.bottom != nil {
+		bottomH := int(b.bottomHeight)
+		b.bottom.Update(screen, displayX, displayY+displayHeight-bottomH, displayWidth, bottomH, 0, 0)
+		displayHeight -= bottomH
+	}
+
+	// Now follows updating the complicated part: updating the child.
+	// We return after it has been updated.
+
+	// Try to modify the screen scroll mode.
+	hwscroll := false
+	if b.Rect.parent == nil {
+		line := int(b.topHeight) + b.scrollOffset%int(b.childHeight)
+		hwscroll = screen.setScroll(b.topHeight, b.bottomHeight, int16(line))
+	}
+
+	// Draw the scrollable child.
+	if !hwscroll {
+		if b.scrollOffset != b.lastScrollOffset {
+			// Fallback: update entire child on scroll.
+			b.child.RequestUpdate()
+		}
+		b.lastScrollOffset = b.scrollOffset
+		b.child.Update(screen, displayX, displayY, displayWidth, displayHeight, 0, b.scrollOffset)
+		return
+	}
+
+	// Check whether the entire screen was changed, in which case we simply
+	// update everything.
+	diff := b.scrollOffset - b.lastScrollOffset
+	if diff >= int(b.childHeight) || diff <= -int(b.childHeight) {
+		b.child.RequestUpdate()
+		b.child.Update(screen, displayX, displayY, displayWidth, displayHeight, 0, b.scrollOffset)
+		b.lastScrollOffset = b.scrollOffset
+		return
+	}
+
+	// The screen may have been moved, but at least some part is still visible.
+	if b.scrollOffset > b.lastScrollOffset {
+		// Moved up.
+		newArea := b.scrollOffset - b.lastScrollOffset // size of newly exposed area
+		existingArea := int(b.childHeight) - newArea   // size of moved area
+
+		// Update the moved part at the top as usual.
+		b.child.Update(screen, displayX, displayY, displayWidth, existingArea, 0, b.scrollOffset)
+
+		// Update the newly exposed area at the bottom, using a bit of a hack:
+		// by requesting an update and then drawing only the newly exposed part.
+		b.child.RequestUpdate()
+		scrollLine := (b.scrollOffset + existingArea) % int(b.childHeight)
+		if scrollLine+newArea >= displayHeight {
+			// The newly exposed area straddles the scroll line.
+			// Therefore, we have to do the update in two parts, one before the
+			// scroll line and one after.
+			updateHeight1 := displayHeight - scrollLine
+			updateHeight2 := newArea - updateHeight1
+			b.child.Update(screen, displayX, displayY+scrollLine, displayWidth, updateHeight1, 0, b.scrollOffset+existingArea)
+			b.child.RequestUpdate()
+			b.child.Update(screen, displayX, displayY, displayWidth, updateHeight2, 0, b.scrollOffset+existingArea+updateHeight1)
+		} else {
+			// The newly exposed area doesn't cross a scroll line, so we can do
+			// this update in one go.
+			b.child.Update(screen, displayX, displayY+scrollLine, displayWidth, newArea, 0, b.scrollOffset+existingArea)
+		}
+	} else if b.scrollOffset < b.lastScrollOffset {
+		// Moved down.
+		newArea := b.lastScrollOffset - b.scrollOffset // size of newly exposed area
+		existingArea := int(b.childHeight) - newArea   // size of moved area
+
+		// Update the moved part at the bottom as usual.
+		b.child.Update(screen, displayX, displayY+newArea, displayWidth, existingArea, 0, b.scrollOffset+newArea)
+
+		// Update the newly exposed area at the top, using a bit of a hack:
+		// by requesting an update and then drawing only the newly exposed part.
+		b.child.RequestUpdate()
+		scrollLine := b.scrollOffset % int(b.childHeight)
+		if scrollLine+newArea >= displayHeight {
+			// The newly exposed area straddles the scroll line.
+			// Therefore, we have to do the update in two parts, one before the
+			// scroll line and one after.
+			updateHeight1 := displayHeight - scrollLine
+			updateHeight2 := newArea - updateHeight1
+			b.child.Update(screen, displayX, displayY+scrollLine, displayWidth, updateHeight1, 0, b.scrollOffset)
+			b.child.RequestUpdate()
+			b.child.Update(screen, displayX, displayY, displayWidth, updateHeight2, 0, b.scrollOffset+updateHeight1)
+		} else {
+			// The newly exposed area doesn't cross a scroll line, so we can do
+			// this update in one go.
+			b.child.Update(screen, displayX, displayY+scrollLine, displayWidth, newArea, 0, b.scrollOffset)
+		}
+	} else {
+		b.child.Update(screen, displayX, displayY, displayWidth, displayHeight, 0, b.scrollOffset)
+	}
+	b.lastScrollOffset = b.scrollOffset
+
+	b.NeedsUpdate() // clear update flag
+}
+
+func (b *VerticalScrollBox[T]) HandleEvent(event Event, x, y int) {
+	switch event {
+	case TouchStart:
+		b.lastTouchY = int16(y)
+	case TouchMove:
+		// Add the last distance moved to the scrollOffset.
+		scrollOffset := b.scrollOffset + (int(b.lastTouchY) - y)
+		if scrollOffset < 0 {
+			scrollOffset = 0
+		}
+		if scrollOffset > b.maxScrollOffset {
+			scrollOffset = b.maxScrollOffset
+		}
+		b.scrollOffset = scrollOffset
+		b.lastTouchY = int16(y)
+	case TouchTap:
+		if y < int(b.topHeight) {
+			b.top.HandleEvent(event, x, y)
+		} else if y < int(b.topHeight)+int(b.childHeight) {
+			b.child.HandleEvent(event, x, y-int(b.topHeight)+b.scrollOffset)
+		} else {
+			b.bottom.HandleEvent(event, x, y-int(b.topHeight)-int(b.childHeight))
+		}
+	}
+}
+
+func (b *VerticalScrollBox[T]) RequestUpdate() {
+	b.Rect.RequestUpdate()
+	if b.top != nil {
+		b.top.RequestUpdate()
+	}
+	if b.bottom != nil {
+		b.bottom.RequestUpdate()
+	}
+	b.child.RequestUpdate()
+}
+
 // EventBox wraps an object and handles events for it.
 type EventBox[T pixel.Color] struct {
 	Object[T]
