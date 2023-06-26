@@ -102,7 +102,10 @@ func (s *Screen[T]) Buffer() pixel.Image[T] {
 	return s.buffer
 }
 
-// Internal function: send an image buffer to the given coordinates.
+// Send an image buffer to the given coordinates.
+//
+// This function is used internally, and should only be used to implement custom
+// widgets.
 func (s *Screen[T]) Send(x, y int, buffer pixel.Image[T]) {
 	rawBuffer := buffer.RawBuffer()
 	var start time.Time
