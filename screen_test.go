@@ -11,7 +11,8 @@ import (
 	"testing"
 
 	"github.com/aykevl/tinygl"
-	"github.com/aykevl/tinygl/pixel"
+	"tinygo.org/x/drivers"
+	"tinygo.org/x/drivers/pixel"
 	"tinygo.org/x/tinyfont/freesans"
 )
 
@@ -36,9 +37,9 @@ func TestScreen(t *testing.T) {
 	}
 }
 
-func makeScreen[T pixel.Color](img ImageDisplay) *tinygl.Screen[T] {
-	buf := pixel.NewImage[T](160, 8)
-	screen := tinygl.NewScreen(img, buf, 120) // 120PPI
+func makeScreen(img ImageDisplay) *tinygl.Screen[pixel.RGB888] {
+	buf := pixel.NewImage[pixel.RGB888](160, 8)
+	screen := tinygl.NewScreen[pixel.RGB888](img, buf, 120) // 120PPI
 	return screen
 }
 
@@ -78,7 +79,7 @@ func loadImage(t *testing.T, path string) image.Image {
 }
 
 func testHelloBanner(t *testing.T, name string, img ImageDisplay) {
-	screen := makeScreen[pixel.RGB888](img)
+	screen := makeScreen(img)
 	font := &freesans.Regular12pt7b
 	foreground := pixel.NewRGB888(0xff, 0xff, 0xff)
 	background := pixel.NewRGB888(64, 64, 64)
@@ -95,7 +96,7 @@ func testHelloBanner(t *testing.T, name string, img ImageDisplay) {
 }
 
 func testGrowable(t *testing.T, name string, img ImageDisplay) {
-	screen := makeScreen[pixel.RGB888](img)
+	screen := makeScreen(img)
 	font := &freesans.Regular12pt7b
 	foreground := pixel.NewRGB888(0xff, 0xff, 0xff)
 	background := pixel.NewRGB888(64, 64, 64)
@@ -147,20 +148,25 @@ func (img ImageDisplay) Size() (int16, int16) {
 	return int16(rect.X), int16(rect.Y)
 }
 
-func (img ImageDisplay) DrawRGBBitmap8(startX, startY int16, data []byte, width, height int16) error {
+func (img ImageDisplay) DrawBitmap(startX, startY int16, image pixel.Image[pixel.RGB888]) error {
+	width, height := image.Size()
 	for y := 0; y < int(height); y++ {
 		for x := 0; x < int(width); x++ {
-			offset := (y*int(width) + x) * 3
+			inCol := image.Get(x, y)
 			c := color.NRGBA{
-				R: data[offset+0],
-				G: data[offset+1],
-				B: data[offset+2],
+				R: inCol.R,
+				G: inCol.G,
+				B: inCol.B,
 				A: 0xff,
 			}
 			img.image.SetNRGBA(x+int(startX), y+int(startY), c)
 		}
 	}
 	return nil
+}
+
+func (img ImageDisplay) Rotation() drivers.Rotation {
+	return drivers.Rotation0
 }
 
 func (img ImageDisplay) Display() error {

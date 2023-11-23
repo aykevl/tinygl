@@ -4,16 +4,16 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/aykevl/tinygl/pixel"
 	"tinygo.org/x/drivers"
+	"tinygo.org/x/drivers/pixel"
 )
 
 const showStats = false
 
 // The Displayer that is drawn to.
-type Displayer interface {
+type Displayer[T pixel.Color] interface {
 	Size() (int16, int16)
-	DrawRGBBitmap8(x, y int16, data []byte, w, h int16) error
+	DrawBitmap(x, y int16, bitmap pixel.Image[T]) error
 	Display() error
 	Rotation() drivers.Rotation
 }
@@ -21,16 +21,16 @@ type Displayer interface {
 // ScrollableDisplay is a display that supports hardware scrolling.
 // A display doesn't have to support it, but if it does, scrolling can become a
 // lot more smooth.
-type ScrollableDisplay interface {
-	Displayer
+type ScrollableDisplay[T pixel.Color] interface {
+	Displayer[T]
 	SetScrollArea(topFixedArea, bottomFixedArea int16)
 	SetScroll(line int16)
 	StopScroll()
 }
 
 type Screen[T pixel.Color] struct {
-	display           Displayer
-	scrollableDisplay ScrollableDisplay
+	display           Displayer[T]
+	scrollableDisplay ScrollableDisplay[T]
 	child             Object[T]
 	buffer            pixel.Image[T]
 	statPixels        int
@@ -47,7 +47,7 @@ type Screen[T pixel.Color] struct {
 // but should preferably be bigger (10% of the screen for example).
 // The ppi parameter is the number of pixels per inch, which is important
 // for touch events.
-func NewScreen[T pixel.Color](display Displayer, buffer pixel.Image[T], ppi int) *Screen[T] {
+func NewScreen[T pixel.Color](display Displayer[T], buffer pixel.Image[T], ppi int) *Screen[T] {
 	width, height := display.Size()
 	maxSize := width
 	if height > width {
@@ -56,7 +56,7 @@ func NewScreen[T pixel.Color](display Displayer, buffer pixel.Image[T], ppi int)
 	if buffer.Len() < int(maxSize) {
 		panic("buffer too small")
 	}
-	hwscroll, _ := display.(ScrollableDisplay)
+	hwscroll, _ := display.(ScrollableDisplay[T])
 	return &Screen[T]{
 		display:           display,
 		scrollableDisplay: hwscroll,
@@ -130,7 +130,6 @@ func (s *Screen[T]) Buffer() pixel.Image[T] {
 // This function is used internally, and should only be used to implement custom
 // widgets.
 func (s *Screen[T]) Send(x, y int, buffer pixel.Image[T]) {
-	rawBuffer := buffer.RawBuffer()
 	var start time.Time
 	if showStats {
 		var zeroColor T
@@ -138,11 +137,10 @@ func (s *Screen[T]) Send(x, y int, buffer pixel.Image[T]) {
 		s.statPixels += buffer.Len() * int(unsafe.Sizeof(zeroColor))
 		start = time.Now()
 	}
-	width, height := buffer.Size()
-	s.display.DrawRGBBitmap8(int16(x), int16(y), rawBuffer, int16(width), int16(height))
-	if showStats && len(rawBuffer) >= 4096 {
+	s.display.DrawBitmap(int16(x), int16(y), buffer)
+	if showStats && len(buffer.RawBuffer()) >= 4096 {
 		duration := time.Since(start)
-		println("buffer send:", len(rawBuffer), duration.String())
+		println("buffer send:", len(buffer.RawBuffer()), duration.String())
 	}
 }
 

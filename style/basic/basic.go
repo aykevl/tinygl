@@ -5,8 +5,8 @@ package basic
 
 import (
 	"github.com/aykevl/tinygl"
-	"github.com/aykevl/tinygl/pixel"
 	"github.com/aykevl/tinygl/style"
+	"tinygo.org/x/drivers/pixel"
 	"tinygo.org/x/tinyfont"
 	"tinygo.org/x/tinyfont/freesans"
 )

@@ -1,6 +1,6 @@
 package gfx
 
-import "github.com/aykevl/tinygl/pixel"
+import "tinygo.org/x/drivers/pixel"
 
 // Object on a canvas.
 type Object[T pixel.Color] interface {

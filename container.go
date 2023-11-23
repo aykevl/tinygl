@@ -1,7 +1,7 @@
 package tinygl
 
 import (
-	"github.com/aykevl/tinygl/pixel"
+	"tinygo.org/x/drivers/pixel"
 )
 
 type VBox[T pixel.Color] struct {

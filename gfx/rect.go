@@ -1,6 +1,6 @@
 package gfx
 
-import "github.com/aykevl/tinygl/pixel"
+import "tinygo.org/x/drivers/pixel"
 
 // Rect is a simple solid color rectangle.
 type Rect[T pixel.Color] struct {

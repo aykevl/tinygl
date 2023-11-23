@@ -2,7 +2,7 @@ package gfx
 
 import (
 	"github.com/aykevl/tinygl"
-	"github.com/aykevl/tinygl/pixel"
+	"tinygo.org/x/drivers/pixel"
 )
 
 // CustomCanvas is a canvas widget to draw custom data.

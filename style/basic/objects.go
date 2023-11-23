@@ -2,7 +2,7 @@ package basic
 
 import (
 	"github.com/aykevl/tinygl"
-	"github.com/aykevl/tinygl/pixel"
+	"tinygo.org/x/drivers/pixel"
 )
 
 // Create a new text label with the default style.

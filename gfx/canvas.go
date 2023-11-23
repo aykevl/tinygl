@@ -2,7 +2,7 @@ package gfx
 
 import (
 	"github.com/aykevl/tinygl"
-	"github.com/aykevl/tinygl/pixel"
+	"tinygo.org/x/drivers/pixel"
 )
 
 const blockSize = 16 // Note: this value may need some tuning.

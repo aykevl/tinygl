@@ -1,7 +1,9 @@
 package tinygl
 
 import (
-	"github.com/aykevl/tinygl/pixel"
+	"image/color"
+
+	"tinygo.org/x/drivers/pixel"
 	"tinygo.org/x/tinyfont"
 )
 
@@ -141,8 +143,36 @@ func paintText[T pixel.Color](screen *Screen[T], x, y, width, height, textX, tex
 		}
 		subimg := screen.buffer.Rescale(width, lines)
 		subimg.FillSolidColor(background)
-		tinyfont.WriteLine(pixel.DisplayerImage[T]{Image: subimg}, font, int16(textX-x), int16(textY-y-lineStart), text, foreground.RGBA())
+		tinyfont.WriteLine(displayerImage[T]{Image: subimg}, font, int16(textX-x), int16(textY-y-lineStart), text, foreground.RGBA())
 		screen.Send(x, y+lineStart, subimg)
 		lineStart += linesPerChunk
 	}
+}
+
+// Wrapper for Image that implements the drivers.Displayer interface.
+type displayerImage[T pixel.Color] struct {
+	pixel.Image[T]
+}
+
+// SetPixel implements the Displayer interface.
+func (img displayerImage[T]) SetPixel(x, y int16, color color.RGBA) {
+	if x < 0 || y < 0 {
+		return
+	}
+	width, height := img.Image.Size()
+	if int(x) >= width || int(y) >= height {
+		return
+	}
+	img.Set(int(x), int(y), pixel.NewColor[T](color.R, color.G, color.B))
+}
+
+// Size implements the Displayer interface.
+func (img displayerImage[T]) Size() (int16, int16) {
+	width, height := img.Image.Size()
+	return int16(width), int16(height)
+}
+
+// Display implements the Displayer interface. It is a no-op.
+func (img displayerImage[T]) Display() error {
+	return nil
 }
