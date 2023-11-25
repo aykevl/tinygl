@@ -187,7 +187,15 @@ func (c *Canvas[T]) markDirty(x, y, width, height int) {
 			c.setDirty(blockX, blockY)
 		}
 	}
-	c.RequestUpdate()
+	c.Rect.RequestUpdate()
+}
+
+func (c *Canvas[T]) RequestUpdate() {
+	// This is a bit of a hack, but it works.
+	c.Rect.RequestUpdate()
+	for i := range c.dirty {
+		c.dirty[i] = 0xff
+	}
 }
 
 // Clear removes all objects from the canvas.
