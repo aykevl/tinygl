@@ -11,4 +11,25 @@ type Object[T pixel.Color] interface {
 
 	// SetHidden changes the visibility of an object.
 	SetHidden(bool)
+
+	// Set the canvas property of an object. This can only be done once.
+	setCanvas(canvas *Canvas[T])
+
+	// markDirty marks the blocks that this object occupies as dirty so that
+	// they will be redrawn on the next update.
+	markDirty()
+}
+
+// baseObject implements common methods on objects.
+type baseObject[T pixel.Color] struct {
+	canvas *Canvas[T]
+	x      int16
+	y      int16
+}
+
+func (obj *baseObject[T]) setCanvas(canvas *Canvas[T]) {
+	if obj.canvas != nil {
+		panic("gfx: object added twice to canvas")
+	}
+	obj.canvas = canvas
 }

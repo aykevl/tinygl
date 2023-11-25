@@ -207,18 +207,10 @@ func (c *Canvas[T]) Clear() {
 	c.objects = c.objects[:0]
 }
 
-// CreateRect creates a new rectangle at the given coordinates with the given
-// color.
-func (c *Canvas[T]) CreateRect(x, y, width, height int, color T) *Rect[T] {
-	obj := &Rect[T]{
-		canvas: c,
-		x:      int16(x),
-		y:      int16(y),
-		width:  int16(width),
-		height: int16(height),
-		color:  color,
-	}
-	obj.markDirty()
-	c.objects = append(c.objects, obj)
-	return obj
+// Add a previously created object to the canvas. An object can't be added more
+// than once.
+func (c *Canvas[T]) Add(object Object[T]) {
+	object.setCanvas(c)
+	object.markDirty()
+	c.objects = append(c.objects, object)
 }

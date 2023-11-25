@@ -4,13 +4,24 @@ import "tinygo.org/x/drivers/pixel"
 
 // Rect is a simple solid color rectangle.
 type Rect[T pixel.Color] struct {
-	canvas *Canvas[T]
-	x      int16
-	y      int16
+	baseObject[T]
 	width  int16
 	height int16
 	color  T
 	hidden bool
+}
+
+// NewRect returns a new rectangle of the given size to be added to the canvas.
+func NewRect[T pixel.Color](color T, x, y, width, height int) *Rect[T] {
+	return &Rect[T]{
+		baseObject: baseObject[T]{
+			x: int16(x),
+			y: int16(y),
+		},
+		width:  int16(width),
+		height: int16(height),
+		color:  color,
+	}
 }
 
 // Draw implements the gfx.Object interface.
