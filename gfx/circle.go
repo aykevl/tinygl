@@ -15,6 +15,9 @@ type Circle[T pixel.Color] struct {
 // The (x, y) coordinates are of the center of the circle, right in the middle
 // of the innermost 4 pixels. This means for example that if you draw a circle
 // at (0, 0) of a large enough canvas, exactly a quarter of the circle is shown.
+//
+// Warning: this API might change once circles with holes and/or circles with
+// borders are added.
 func NewCircle[T pixel.Color](color T, x, y, radius int) *Circle[T] {
 	return &Circle[T]{
 		baseObject: baseObject[T]{
