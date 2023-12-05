@@ -28,15 +28,15 @@ To make things fast and to reduce memory consumption, there are a few code style
 
 This library isn't complete. There are some things I'd like to improve before calling this stable:
 
-  * The `Displayer` interface isn't great: `DrawRGBBitmap8` always takes a byte slice, which is unfortunate. It would be better if it could take a slice of the underlying pixel data instead.
-  * Black-and-white screens aren't well supported: they have pixel data smaller than a single byte. These screens aren't natively supported in LVGL either, but it would be nice if we were able to.
-  * Displays with in-memory buffers could be better supported, by writing to the buffers directly. An example is the hub75 display driver.
-  * Theming needs to be improved. Ideally, the theme and the layout code are entirely separate and the theme just sets the sizes/colors to be used for standard widgets.
-  * DPI scaling isn't implemented yet. It should ideally be able to do all important calculations at compile time.
-  * Lots of features are missing, like:
-      * show/hide animations that look smooth (by only redrawing parts of the screen that changed)
-      * using hardware scrolling present in most SPI displays
-      * all the missing widgets and container types
+  - [x] ~The `Displayer` interface isn't great: `DrawRGBBitmap8` always takes a byte slice, which is unfortunate. It would be better if it could take a slice of the underlying pixel data instead.~
+  - [ ] Black-and-white screens aren't well supported: they have pixel data smaller than a single byte. These screens aren't natively supported in LVGL either, but it would be nice if we were able to.
+  - [ ] Displays with in-memory buffers could be better supported, by writing to the buffers directly. An example is the hub75 display driver.
+  - [ ] Theming needs to be improved. Ideally, the theme and the layout code are entirely separate and the theme just sets the sizes/colors to be used for standard widgets.
+  - [ ] DPI scaling isn't implemented yet. It should ideally be able to do all important calculations at compile time.
+  - Lots of features are missing, like:
+    - [ ] show/hide animations that look smooth (by only redrawing parts of the screen that changed)
+    - [x] ~using hardware scrolling present in most SPI displays~
+    - [ ] all the missing widgets and container types
 
 ## License
 
