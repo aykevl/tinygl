@@ -46,14 +46,14 @@ func (obj *Image[T]) Update(screen *Screen[T], displayX, displayY, displayWidth,
 		return // nothing to do
 	}
 
-	linesPerChunk := screen.buffer.Len() / displayWidth
 	lineStart := 0
 	for lineStart < displayHeight {
-		lines := linesPerChunk
+		buf := screen.Buffer()
+		lines := buf.Len() / displayWidth
 		if lineStart+lines > displayHeight {
 			lines = displayHeight - lineStart
 		}
-		subimg := screen.buffer.Rescale(displayWidth, lines)
+		subimg := buf.Rescale(displayWidth, lines)
 		subimg.FillSolidColor(obj.background) // always necessary because of transparency
 		obj.img.Draw(subimg, x-int(obj.imageX), y+lineStart-int(obj.imageY), 1)
 		screen.Send(x, y+lineStart, subimg)

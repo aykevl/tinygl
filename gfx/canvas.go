@@ -87,13 +87,13 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T], displayX, displayY, display
 		if blockHeight <= 0 {
 			panic("unreachable?")
 		}
-		buf := screen.Buffer()
-		maxBlocksPerRow := buf.Len() / (blockSize * blockHeight)
 		for blockX := blockX0; blockX < blockX1; blockX++ {
 			// Note: could be sped up by checking whole bytes at a time.
 			if !c.isDirty(blockX, blockY) {
 				continue
 			}
+			buf := screen.Buffer()
+			maxBlocksPerRow := buf.Len() / (blockSize * blockHeight)
 			// TODO: combine blocks into a larger rectangle to be drawn at a
 			// single time.
 			c.clearDirty(blockX, blockY)
