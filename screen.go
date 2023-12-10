@@ -2,7 +2,6 @@ package tinygl
 
 import (
 	"time"
-	"unsafe"
 
 	"tinygo.org/x/drivers"
 	"tinygo.org/x/drivers/pixel"
@@ -100,21 +99,23 @@ func (s *Screen[T]) Layout() {
 // Update sends all changes in the screen to the (hardware) display.
 func (s *Screen[T]) Update() error {
 	var start time.Time
+	s.statPixels = 0
 	if showStats {
 		s.statBuffers = 0
-		s.statPixels = 0
 		start = time.Now()
 	}
 	s.Layout()
 	width, height := s.display.Size()
 	s.child.Update(s, 0, 0, int(width), int(height), 0, 0)
-	if showStats {
-		duration := time.Since(start)
-		println("sent", s.statPixels, "bytes using", s.statBuffers, "buffers in", duration.String())
-	}
-	err := s.display.Display()
-	if err != nil {
-		return err
+	if s.statPixels != 0 {
+		if showStats {
+			duration := time.Since(start)
+			println("sent", s.statPixels, "pixels using", s.statBuffers, "buffers in", duration.String())
+		}
+		err := s.display.Display()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -131,14 +132,13 @@ func (s *Screen[T]) Buffer() pixel.Image[T] {
 // widgets.
 func (s *Screen[T]) Send(x, y int, buffer pixel.Image[T]) {
 	var start time.Time
+	s.statPixels += buffer.Len()
 	if showStats {
-		var zeroColor T
 		s.statBuffers++
-		s.statPixels += buffer.Len() * int(unsafe.Sizeof(zeroColor))
 		start = time.Now()
 	}
 	s.display.DrawBitmap(int16(x), int16(y), buffer)
-	if showStats && len(buffer.RawBuffer()) >= 4096 {
+	if showStats {
 		duration := time.Since(start)
 		println("buffer send:", len(buffer.RawBuffer()), duration.String())
 	}
