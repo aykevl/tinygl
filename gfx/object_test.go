@@ -37,55 +37,61 @@ func TestCircle(t *testing.T) {
 		circle := gfx.NewCircle[pixel.RGB888](white, middleX, middleY, r)
 		circle.Draw(0, 0, buf)
 
-		// Convert the pixel buffer to a Go pixel buffer.
-		img := image.NewRGBA(image.Rectangle{image.Point{}, image.Point{w, h}})
-		for y := 0; y < h; y++ {
-			for x := 0; x < w; x++ {
-				img.Set(x, y, buf.Get(x, y).RGBA())
-			}
-		}
+		compareTestOutput(t, buf, filename)
+	}
+}
 
-		if *flagUpdate {
-			// Write the image out to the testdata directory.
-			f, err := os.Create(filename)
-			if err != nil {
-				t.Fatal("could not create golden output file:", err)
-			}
-			png.Encode(f, img)
-			f.Close()
-			continue
-		}
+func compareTestOutput(t *testing.T, buf pixel.Image[pixel.RGB888], filename string) {
+	w, h := buf.Size()
 
-		// Load golden file (the file to check against).
-		f, err := os.Open(filename)
+	// Convert the pixel buffer to a Go pixel buffer.
+	img := image.NewRGBA(image.Rectangle{image.Point{}, image.Point{w, h}})
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			img.Set(x, y, buf.Get(x, y).RGBA())
+		}
+	}
+
+	if *flagUpdate {
+		// Write the image out to the testdata directory.
+		f, err := os.Create(filename)
 		if err != nil {
-			t.Error("could not open golden file:", err)
-			continue
+			t.Fatal("could not create golden output file:", err)
 		}
-		defer f.Close()
-		golden, err := png.Decode(f)
-		if err != nil {
-			t.Error("could not read golden file:", err)
-			continue
-		}
+		png.Encode(f, img)
+		f.Close()
+		return
+	}
 
-		// Compare the output.
-		if img.Bounds().Size() != golden.Bounds().Size() {
-			size := img.Bounds().Size()
-			t.Errorf("unexpected size for r=%d: %dx%d", r, size.X, size.Y)
-		}
-		mismatch := 0
-		for y := 0; y < w; y++ {
-			for x := 0; x < h; x++ {
-				r1, g1, b1, _ := img.At(x, y).RGBA()
-				r2, g2, b2, _ := golden.At(x, y).RGBA()
-				if r1 != r2 || g1 != g2 || b1 != b2 {
-					mismatch++
-				}
+	// Load golden file (the file to check against).
+	f, err := os.Open(filename)
+	if err != nil {
+		t.Error("could not open golden file:", err)
+		return
+	}
+	defer f.Close()
+	golden, err := png.Decode(f)
+	if err != nil {
+		t.Error("could not read golden file:", err)
+		return
+	}
+
+	// Compare the output.
+	if img.Bounds().Size() != golden.Bounds().Size() {
+		size := img.Bounds().Size()
+		t.Errorf("unexpected size for %s: %dx%d", filename, size.X, size.Y)
+	}
+	mismatch := 0
+	for y := 0; y < w; y++ {
+		for x := 0; x < h; x++ {
+			r1, g1, b1, _ := img.At(x, y).RGBA()
+			r2, g2, b2, _ := golden.At(x, y).RGBA()
+			if r1 != r2 || g1 != g2 || b1 != b2 {
+				mismatch++
 			}
 		}
-		if mismatch != 0 {
-			t.Errorf("mismatch found for r=%d: %d pixels are different", r, mismatch)
-		}
+	}
+	if mismatch != 0 {
+		t.Errorf("mismatch found for %s: %d pixels are different", filename, mismatch)
 	}
 }
