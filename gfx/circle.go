@@ -82,10 +82,10 @@ func (obj *Circle[T]) Draw(imgX, imgY int, img pixel.Image[T]) {
 				// division only once per Draw call:
 				//    intensity := extra * 255 / offset
 				intensity := extra * intensityDiv / 256
-				obj.drawPixel(img, x+cx, y+cy-1, uint8(intensity))
-				obj.drawPixel(img, x+cx, y-cy, uint8(intensity))
-				obj.drawPixel(img, x-cx-1, y-cy, uint8(intensity))
-				obj.drawPixel(img, x-cx-1, y+cy-1, uint8(intensity))
+				blendPixel(img, x+cx, y+cy-1, obj.color, uint8(intensity))
+				blendPixel(img, x+cx, y-cy, obj.color, uint8(intensity))
+				blendPixel(img, x-cx-1, y-cy, obj.color, uint8(intensity))
+				blendPixel(img, x-cx-1, y+cy-1, obj.color, uint8(intensity))
 			}
 
 			// Calculate the radius from the center of the circle:
@@ -114,40 +114,8 @@ func (obj *Circle[T]) Draw(imgX, imgY int, img pixel.Image[T]) {
 
 		// Fill the inside of the circle using two lines (for the top half and
 		// the bottom half of the circle).
-		obj.drawLine(img, x-cx, x+cx, y-cy)
-		obj.drawLine(img, x-cx, x+cx, y+cy-1)
-	}
-}
-
-// Draw our color to a given pixel, given a particular alpha channel.
-// This is used for antialiasing.
-func (obj *Circle[T]) drawPixel(img pixel.Image[T], x, y int, alpha uint8) {
-	w, h := img.Size()
-	if uint(x) < uint(w) && uint(y) < uint(h) {
-		color := naiveBlend(img.Get(x, y), obj.color, alpha)
-		img.Set(x, y, color)
-	}
-}
-
-// Draw a horizontal straight line without antialiasing.
-func (obj *Circle[T]) drawLine(img pixel.Image[T], x0, x1, y int) {
-	imgWidth, imgHeight := img.Size()
-	if y < 0 || y >= imgHeight {
-		return
-	}
-	if x0 < 0 {
-		x0 = 0
-	}
-	if x1 >= imgWidth {
-		x1 = imgWidth
-	}
-	if x0 >= x1 {
-		return
-	}
-	// TODO: this can be optimized a lot when implemented directly inside
-	// pixel.Image. Especially with RGB444.
-	for x := x0; x < x1; x++ {
-		img.Set(x, y, obj.color)
+		drawLine(img, x-cx, x+cx, y-cy, obj.color)
+		drawLine(img, x-cx, x+cx, y+cy-1, obj.color)
 	}
 }
 

@@ -29,31 +29,7 @@ func (obj *Rect[T]) Draw(imgX, imgY int, img pixel.Image[T]) {
 	if obj.hidden {
 		return
 	}
-	imgWidth, imgHeight := img.Size()
-	startX := int(obj.x) - imgX
-	startY := int(obj.y) - imgY
-	stopX := startX + int(obj.width)
-	stopY := startY + int(obj.height)
-	if stopX < 0 || stopY < 0 || startX >= imgWidth || startY >= imgHeight {
-		return // out of bounds
-	}
-	if startX < 0 {
-		startX = 0
-	}
-	if startY < 0 {
-		startY = 0
-	}
-	if stopX >= imgWidth {
-		stopX = imgWidth
-	}
-	if stopY >= imgHeight {
-		stopY = imgHeight
-	}
-	for y := startY; y < stopY; y++ {
-		for x := startX; x < stopX; x++ {
-			img.Set(x, y, obj.color)
-		}
-	}
+	drawRect(img, obj.color, int(obj.x)-imgX, int(obj.y)-imgY, int(obj.width), int(obj.height))
 }
 
 // Bounds returns the rectangle coordinates relative to (0, 0) of the canvas.
@@ -105,5 +81,33 @@ func (obj *Rect[T]) SetColor(color T) {
 	obj.color = color
 	if !obj.hidden {
 		obj.markDirty()
+	}
+}
+
+func drawRect[T pixel.Color](img pixel.Image[T], color T, x, y, width, height int) {
+	imgWidth, imgHeight := img.Size()
+	startX := x
+	startY := y
+	stopX := x + width
+	stopY := y + height
+	if stopX < 0 || stopY < 0 || startX >= imgWidth || startY >= imgHeight {
+		return // out of bounds
+	}
+	if startX < 0 {
+		startX = 0
+	}
+	if startY < 0 {
+		startY = 0
+	}
+	if stopX >= imgWidth {
+		stopX = imgWidth
+	}
+	if stopY >= imgHeight {
+		stopY = imgHeight
+	}
+	for y := startY; y < stopY; y++ {
+		for x := startX; x < stopX; x++ {
+			img.Set(x, y, color)
+		}
 	}
 }

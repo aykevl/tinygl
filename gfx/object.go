@@ -40,7 +40,8 @@ const is16bit = ^uintptr(0)>>16 == 0
 
 // Naive linear blend of two pixel values.
 // Naive, because blending assumes pixels are linear while they aren't (they use
-// the usual gamma encoding of sRGB). It's good enough for our purposes though.
+// the usual gamma encoding of sRGB). It's good enough for our purposes though,
+// and doing a correct blend would be more computationally expensive.
 func naiveBlend[T pixel.Color](bottom, top T, alpha uint8) T {
 	bottomColor := bottom.RGBA()
 	topColor := top.RGBA()
@@ -62,4 +63,36 @@ func linearBlend(bottom, top, topAlpha uint8) uint8 {
 	bottomPart := int(bottom) * (255 - int(topAlpha))
 	topPart := int(top) * int(topAlpha)
 	return uint8((bottomPart + topPart + 255) / 256)
+}
+
+// Draw a horizontal straight line without antialiasing.
+func drawLine[T pixel.Color](img pixel.Image[T], x0, x1, y int, color T) {
+	imgWidth, imgHeight := img.Size()
+	if y < 0 || y >= imgHeight {
+		return
+	}
+	if x0 < 0 {
+		x0 = 0
+	}
+	if x1 >= imgWidth {
+		x1 = imgWidth
+	}
+	if x0 >= x1 {
+		return
+	}
+	// TODO: this can be optimized a lot when implemented directly inside
+	// pixel.Image. Especially with RGB444.
+	for x := x0; x < x1; x++ {
+		img.Set(x, y, color)
+	}
+}
+
+// Draw our color to a given pixel, given a particular alpha channel.
+// This is used for antialiasing.
+func blendPixel[T pixel.Color](img pixel.Image[T], x, y int, color T, alpha uint8) {
+	w, h := img.Size()
+	if uint(x) < uint(w) && uint(y) < uint(h) {
+		color := naiveBlend(img.Get(x, y), color, alpha)
+		img.Set(x, y, color)
+	}
 }
