@@ -41,6 +41,7 @@ var (
 	flagDPI     = flag.Float64("dpi", 72, "render at given DPI")
 	flagOut     = flag.String("o", "", "output filename")
 	flagPackage = flag.String("package", "font", "package name for output Go file")
+	flagVerbose = flag.Bool("verbose", false, "print debugging information")
 )
 
 // Store calculated font data before writing it out as a .go file.
@@ -51,6 +52,18 @@ type FontData struct {
 	runeTables   []*runeTable
 	glyphs       []*glyph
 	glyphIndices map[string]int
+
+	// Keep track of the glyph bounding boxes, for verbose mode.
+	glyphAdvance rangeTrack
+	glyphTop     rangeTrack
+	glyphBottom  rangeTrack
+	glyphLeft    rangeTrack
+	glyphRight   rangeTrack
+
+	// Compression statistics.
+	totalGlyphRows        int
+	glyphRowsRepeats      int
+	glyphRowsRepeatPixels int
 }
 
 // Write font data out as a Go file, don't provide any font mathematics.
@@ -149,7 +162,7 @@ func (d *FontData) addRunes(face font.Face, start, end rune) {
 	d.runeTables = append(d.runeTables, table)
 	for r := start; r <= end; r++ {
 		// Convert rune to glyph.
-		glyphData, ok := makeGlyph(face, r)
+		glyphData, ok := d.makeGlyph(face, r)
 		if !ok {
 			table.glyphs = append(table.glyphs, 0) // replacement character
 			d.glyphs[0].runes = append(d.glyphs[0].runes, r)
@@ -175,7 +188,7 @@ func (d *FontData) addRunes(face font.Face, start, end rune) {
 }
 
 // Convert a single rune to a glyph.
-func makeGlyph(face font.Face, r rune) (data []byte, ok bool) {
+func (fd *FontData) makeGlyph(face font.Face, r rune) (data []byte, ok bool) {
 	advance, ok := face.GlyphAdvance(r)
 	if !ok {
 		// Glyph not found.
@@ -235,15 +248,57 @@ func makeGlyph(face font.Face, r rune) (data []byte, ok bool) {
 		right = 0
 	}
 
+	// Keep track of glyph bounding box.
+	fd.glyphAdvance.Add(advance.Round())
+	fd.glyphTop.Add(top)
+	fd.glyphBottom.Add(bottom)
+	fd.glyphLeft.Add(left)
+	fd.glyphRight.Add(right)
+
 	// Convert grayscale image to a bitmap.
 	maskWidth := right - left
 	maskHeight := bottom - top
-	mask := make([]byte, (maskHeight*maskWidth*bits+7)/8)
+	var mask []byte
+	index := 0
+	addBits := func(n uint8) {
+		if index/8 >= len(mask) {
+			mask = append(mask, 0)
+		}
+		mask[index/8] |= n << (index % 8)
+		index += bits
+	}
 	for y := 0; y < maskHeight; y++ {
+		fd.totalGlyphRows++
+		imgY := y + top + height/2
+		if y != 0 {
+			// Check whether it is identical to the previous row.
+			sameAsPrevious := true
+			for x := 0; x < maskWidth; x++ {
+				imgX := x + left + width/2
+				c1 := grayBits(img.GrayAt(imgX, imgY-1))
+				c2 := grayBits(img.GrayAt(imgX, imgY))
+				if c1 != c2 {
+					sameAsPrevious = false
+				}
+			}
+			if sameAsPrevious {
+				fd.glyphRowsRepeats++
+				fd.glyphRowsRepeatPixels += maskWidth
+
+				// Emit "repeat previous line" command.
+				// TODO: it might be profitable to also specify how often to
+				// repeat.
+				addBits(0b01)
+				continue
+			}
+		}
+
+		// Emit bitmap command.
+		addBits(0b00)
 		for x := 0; x < maskWidth; x++ {
-			c := grayBits(img.GrayAt(x+left+width/2, y+top+height/2))
-			index := (y*maskWidth + x) * bits
-			mask[index/8] |= c << (index % 8)
+			imgX := x + left + width/2
+			c := grayBits(img.GrayAt(imgX, imgY))
+			addBits(c)
 		}
 	}
 
@@ -316,6 +371,18 @@ func convert() error {
 		}
 	}
 
+	if *flagVerbose {
+		fmt.Printf("Glyph metadata ranges:\n")
+		fmt.Printf("  advance: %s\n", fontData.glyphAdvance)
+		fmt.Printf("  top:     %s\n", fontData.glyphTop)
+		fmt.Printf("  bottom:  %s\n", fontData.glyphBottom)
+		fmt.Printf("  left:    %s\n", fontData.glyphLeft)
+		fmt.Printf("  right:   %s\n", fontData.glyphRight)
+		fmt.Printf("Compression stats:\n")
+		fmt.Printf("  Total number of rows: %d\n", fontData.totalGlyphRows)
+		fmt.Printf("  Rows that repeat:     %d (pixels: %d)\n", fontData.glyphRowsRepeats, fontData.glyphRowsRepeatPixels)
+	}
+
 	return nil
 }
 
@@ -331,6 +398,35 @@ func encode24(n uint32) string {
 		panic("cannot encode as 24 bit number") // sanity check
 	}
 	return fmt.Sprintf("\"\\x%02x\\x%02x\\x%02x\"", uint8(n>>0), uint8(n>>8), uint8(n>>16))
+}
+
+type rangeTrack struct {
+	min      int
+	max      int
+	hasValue bool
+}
+
+func (r *rangeTrack) Add(value int) {
+	if !r.hasValue {
+		// initial value
+		r.hasValue = true
+		r.min = value
+		r.max = value
+		return
+	}
+	if value < r.min {
+		r.min = value
+	}
+	if value > r.max {
+		r.max = value
+	}
+}
+
+func (r rangeTrack) String() string {
+	if !r.hasValue {
+		return "<unknown>"
+	}
+	return fmt.Sprintf("%d..%d", r.min, r.max)
 }
 
 func main() {

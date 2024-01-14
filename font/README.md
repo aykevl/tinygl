@@ -65,4 +65,9 @@ The header looks like this:
 | int8      | left    | Left bounding box of the bitmap, relative to the origin. This can be a negative integer for characters like 'j'.
 | int8      | right   | Right bounding box for the bitmap, relative to the origin (usually positive).
 
-The data consists of a sequence of bits, where each pair of two bits represents one pixel. It is padded to a full byte using zero bits.
+The bitmap consists of a number of rows, prefixed by a two-bit command. All values are packed as a large bitstring, though care is take to keep commands in a single byte.
+
+  * Command `0b00` simply draws a bitmap row. The data consists of a sequence of bits, where each pair of two bits represents one pixel.
+  * Command `0b01` repeats the previous command. This is beneficial in many characters such as 'n' which have many rows that are actually just a repeat of a previous row.
+
+The bitmap is padded to a full byte using zero bits.

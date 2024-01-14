@@ -112,29 +112,48 @@ func Draw[T pixel.Color](font Font, text string, x, y int, color T, buf pixel.Im
 		maskWidth := right - left
 		maskHeight := bottom - top
 		index := (glyph.offset + 5) * 8
+		previousCommand := uint8(0)
+		previousIndex := 0
 		for gy := 0; gy < maskHeight; gy++ {
-			py := y + gy + top
-			if uint(py) >= uint(h) {
-				// Skip this line.
-				index += maskWidth * bits
-				continue
-			}
-			for gx := 0; gx < maskWidth; gx++ {
-				c := (font.data[index/8] >> (index % 8)) & (1<<bits - 1)
-				if c != 0 {
-					px := x + gx + left
-					if uint(px) < uint(w) {
-						const cmax = 1<<bits - 1
-						if c == cmax {
-							buf.Set(px, py, color)
-						} else {
-							bottom := buf.Get(px, py)
-							blended := naiveBlend(bottom, color, c*(255/cmax))
-							buf.Set(px, py, blended)
+			command := (font.data[index/8] >> (index % 8)) & 0b11
+			index += 2
+			if command == 0b00 || (command == 0b01 && previousCommand == 0b00) {
+				drawIndex := index
+				if command == 0b00 {
+					previousCommand = 0b00
+					previousIndex = index
+				} else {
+					drawIndex = previousIndex
+				}
+				py := y + gy + top
+				if uint(py) >= uint(h) {
+					// Skip this line.
+					if command == 0b00 {
+						// Skip the bitmap that follows.
+						index += maskWidth * bits
+					}
+					continue
+				}
+				for gx := 0; gx < maskWidth; gx++ {
+					c := (font.data[drawIndex/8] >> (drawIndex % 8)) & (1<<bits - 1)
+					if c != 0 {
+						px := x + gx + left
+						if uint(px) < uint(w) {
+							const cmax = 1<<bits - 1
+							if c == cmax {
+								buf.Set(px, py, color)
+							} else {
+								bottom := buf.Get(px, py)
+								blended := naiveBlend(bottom, color, c*(255/cmax))
+								buf.Set(px, py, blended)
+							}
 						}
 					}
+					drawIndex += bits
 				}
-				index += bits
+				if command == 0b00 {
+					index = drawIndex
+				}
 			}
 		}
 		x += glyph.advance()
