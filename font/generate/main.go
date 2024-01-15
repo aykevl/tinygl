@@ -64,6 +64,8 @@ type FontData struct {
 	totalGlyphRows        int
 	glyphRowsRepeats      int
 	glyphRowsRepeatPixels int
+	glyphMetadataSize     int
+	glyphBitmapSize       int
 }
 
 // Write font data out as a Go file, don't provide any font mathematics.
@@ -92,7 +94,10 @@ import (
 	"github.com/aykevl/tinygl/font"
 )
 
-// This font takes up {{.binarySize}} bytes.
+// Font statistics:
+// - total size:      {{.binarySize}}
+// - glyph metadata:  {{.glyphMetadataSize}}
+// - glyph mask data: {{.glyphBitmapSize}}
 
 var Regular{{.size}} = font.Make("" +
 	"\x00" + // version: 0
@@ -100,14 +105,16 @@ var Regular{{.size}} = font.Make("" +
 	"\x{{printf "%02x" .height}}" + // height: {{.height}}
 	"\x{{printf "%02x" .ascent}}" + // ascent: {{.ascent}}
 `)).Execute(w, map[string]any{
-		"font":       *flagFont,
-		"flagSize":   *flagSize,
-		"flagDPI":    *flagDPI,
-		"package":    *flagPackage,
-		"size":       d.size,
-		"height":     d.height,
-		"ascent":     d.ascent,
-		"binarySize": offset,
+		"font":              *flagFont,
+		"flagSize":          *flagSize,
+		"flagDPI":           *flagDPI,
+		"package":           *flagPackage,
+		"size":              d.size,
+		"height":            d.height,
+		"ascent":            d.ascent,
+		"binarySize":        offset,
+		"glyphMetadataSize": d.glyphMetadataSize,
+		"glyphBitmapSize":   d.glyphBitmapSize,
 	})
 
 	// Add rune tables.
@@ -313,6 +320,9 @@ func (fd *FontData) makeGlyph(face font.Face, r rune) (data []byte, ok bool) {
 		byte(int8(right)),
 	}
 	data = append(data, mask...)
+
+	fd.glyphMetadataSize += 5
+	fd.glyphBitmapSize += len(mask)
 
 	return data, true
 }

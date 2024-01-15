@@ -7,7 +7,10 @@ import (
 	"github.com/aykevl/tinygl/font"
 )
 
-// This font takes up 2432 bytes.
+// Font statistics:
+// - total size:      2432
+// - glyph metadata:  475
+// - glyph mask data: 1756
 
 var Regular16 = font.Make("" +
 	"\x00" + // version: 0
