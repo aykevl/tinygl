@@ -265,15 +265,7 @@ func (fd *FontData) makeGlyph(face font.Face, r rune) (data []byte, ok bool) {
 	// Convert grayscale image to a bitmap.
 	maskWidth := right - left
 	maskHeight := bottom - top
-	var mask []byte
-	index := 0
-	addBits := func(n uint8) {
-		if index/8 >= len(mask) {
-			mask = append(mask, 0)
-		}
-		mask[index/8] |= n << (index % 8)
-		index += bits
-	}
+	var mask bitWriter
 	for y := 0; y < maskHeight; y++ {
 		fd.totalGlyphRows++
 		imgY := y + top + height/2
@@ -295,17 +287,17 @@ func (fd *FontData) makeGlyph(face font.Face, r rune) (data []byte, ok bool) {
 				// Emit "repeat previous line" command.
 				// TODO: it might be profitable to also specify how often to
 				// repeat.
-				addBits(0b01)
+				mask.WriteN(0b01, 2)
 				continue
 			}
 		}
 
 		// Emit bitmap command.
-		addBits(0b00)
+		mask.WriteN(0b00, 2)
 		for x := 0; x < maskWidth; x++ {
 			imgX := x + left + width/2
 			c := grayBits(img.GrayAt(imgX, imgY))
-			addBits(c)
+			mask.WriteN(c, bits)
 		}
 	}
 
@@ -319,10 +311,10 @@ func (fd *FontData) makeGlyph(face font.Face, r rune) (data []byte, ok bool) {
 		byte(int8(left)),
 		byte(int8(right)),
 	}
-	data = append(data, mask...)
+	data = append(data, mask.bits...)
 
 	fd.glyphMetadataSize += 5
-	fd.glyphBitmapSize += len(mask)
+	fd.glyphBitmapSize += len(mask.bits)
 
 	return data, true
 }
@@ -437,6 +429,28 @@ func (r rangeTrack) String() string {
 		return "<unknown>"
 	}
 	return fmt.Sprintf("%d..%d", r.min, r.max)
+}
+
+// bitWriter is a slice of bits that can be written to at the end.
+type bitWriter struct {
+	bits  []byte
+	index int
+}
+
+// Write n bits to the bit buffer.
+func (b *bitWriter) WriteN(value uint8, n int) {
+	// Allocate enough space for the new bits.
+	for len(b.bits) < (b.index+n+7)/8 {
+		b.bits = append(b.bits, 0)
+	}
+
+	// Write the bits one by one.
+	// Ths can be done much more efficiently.
+	for i := 0; i < n; i++ {
+		b.bits[b.index/8] |= (value & 1) << (b.index % 8)
+		b.index++
+		value >>= 1
+	}
 }
 
 func main() {
