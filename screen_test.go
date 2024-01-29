@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/aykevl/tinygl"
+	"github.com/aykevl/tinygl/font/roboto"
 	"tinygo.org/x/drivers"
 	"tinygo.org/x/drivers/pixel"
-	"tinygo.org/x/tinyfont/freesans"
 )
 
 var flagUpdate = flag.Bool("update", false, "update test outputs")
@@ -80,7 +80,7 @@ func loadImage(t *testing.T, path string) image.Image {
 
 func testHelloBanner(t *testing.T, name string, img ImageDisplay) {
 	screen := makeScreen(img)
-	font := &freesans.Regular12pt7b
+	font := roboto.Regular24
 	foreground := pixel.NewRGB888(0xff, 0xff, 0xff)
 	background := pixel.NewRGB888(64, 64, 64)
 	topbar := tinygl.NewText(font, foreground, pixel.NewRGB888(255, 0, 0), "Hello world!")
@@ -97,7 +97,7 @@ func testHelloBanner(t *testing.T, name string, img ImageDisplay) {
 
 func testGrowable(t *testing.T, name string, img ImageDisplay) {
 	screen := makeScreen(img)
-	font := &freesans.Regular12pt7b
+	font := roboto.Regular24
 	foreground := pixel.NewRGB888(0xff, 0xff, 0xff)
 	background := pixel.NewRGB888(64, 64, 64)
 	topbar := tinygl.NewText(font, foreground, pixel.NewRGB888(255, 0, 0), "Grow objects")

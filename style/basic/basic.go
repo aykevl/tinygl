@@ -5,17 +5,17 @@ package basic
 
 import (
 	"github.com/aykevl/tinygl"
+	"github.com/aykevl/tinygl/font"
+	"github.com/aykevl/tinygl/font/roboto"
 	"github.com/aykevl/tinygl/style"
 	"tinygo.org/x/drivers/pixel"
-	"tinygo.org/x/tinyfont"
-	"tinygo.org/x/tinyfont/freesans"
 )
 
 type Basic[T pixel.Color] struct {
 	screen *tinygl.Screen[T]
 
 	// Theme related properties.
-	Font       *tinyfont.Font
+	Font       font.Font
 	Foreground T // text, borders, etc
 	Background T // background
 	Tint       T // highlights (checked boxes, active list element, etc)
@@ -29,16 +29,26 @@ func NewTheme[T pixel.Color](scale style.Scale, screen *tinygl.Screen[T]) *Basic
 	// Pick a font that is suitable for the given scale.
 	// We can't just pick any size, so we have to use some heuristics.
 	percent := scale.Percent()
-	var font *tinyfont.Font
+	var font font.Font
 	switch {
-	case percent <= 112: // around 100%
-		font = &freesans.Regular9pt7b
-	case percent <= 150: // around 133%
-		font = &freesans.Regular12pt7b
-	case percent <= 225: // around 200%
-		font = &freesans.Regular18pt7b
-	default: // around 266%
-		font = &freesans.Regular24pt7b
+	case percent <= 100:
+		font = roboto.Regular16
+	case percent <= 125:
+		font = roboto.Regular20
+	case percent <= 150:
+		font = roboto.Regular24
+	case percent <= 175:
+		font = roboto.Regular28
+	case percent <= 200:
+		font = roboto.Regular32
+	case percent <= 225:
+		font = roboto.Regular36
+	case percent <= 250:
+		font = roboto.Regular40
+	case percent <= 275:
+		font = roboto.Regular44
+	default: // 300% and larger
+		font = roboto.Regular48
 	}
 
 	return &Basic[T]{
