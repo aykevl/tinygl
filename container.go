@@ -108,11 +108,14 @@ func (b *VBox[T]) Update(screen *Screen[T], displayX, displayY, displayWidth, di
 		childHeight := int(b.childHeights[i])
 		childDisplayY := displayY - y + childOffset
 		childY := 0
-		if childDisplayY < displayY {
-			childDisplayY = displayY
-			childY = displayY - childDisplayY
-		}
 		childDisplayHeight := int(b.childHeights[i])
+		// Cut off the top part if it is outside the update area.
+		if childDisplayY < displayY {
+			childDisplayHeight -= displayY - childDisplayY
+			childY = displayY - childDisplayY
+			childDisplayY = displayY
+		}
+		// Cut off the bottom part if it is outside the update area.
 		if childDisplayY+childDisplayHeight > displayY+displayHeight {
 			childDisplayHeight = (displayY + displayHeight) - childDisplayY
 		}
