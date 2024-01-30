@@ -288,10 +288,16 @@ func (box *ListBox[T]) Select(index int) {
 		panic("ListBox.Select: out of range")
 	}
 	box.selected = int16(index)
-	if index != -1 {
+	if index >= 0 {
 		child := &box.children[box.selected]
 		child.SetBackground(box.tint)
 		child.SetColor(box.Background())
+		firstChild := &box.children[0]
+		_, commonChildHeight := firstChild.MinSize()
+		childY := (index / int(box.numCols)) * commonChildHeight
+		if box.Parent() != nil {
+			box.Parent().ScrollIntoViewVertical(childY, childY+int(commonChildHeight), box)
+		}
 	}
 }
 

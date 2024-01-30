@@ -44,6 +44,13 @@ type Object[T pixel.Color] interface {
 	// direction.
 	SetGrowable(horizontal, vertical int)
 
+	// If possible, scroll the parent (or parent-of-parent, recursively) scroll
+	// container so that the given area moves into view. The top line is the
+	// topmost pixel that should become visible, while the bottom offset is one
+	// pixel past the area that should become visible (so that bottom-top is the
+	// height of the area to make visible).
+	ScrollIntoViewVertical(top, bottom int, object Object[T])
+
 	requestChildUpdate()
 	requestChildLayout()
 }
@@ -77,6 +84,11 @@ func (r *Rect[T]) SetParent(parent Object[T]) {
 		panic("SetParent: already set")
 	}
 	r.parent = parent
+}
+
+// Parent returns the current parent element, if available.
+func (r *Rect[T]) Parent() Object[T] {
+	return r.parent
 }
 
 // Background returns the current background for this object.
@@ -153,4 +165,11 @@ func (r *Rect[T]) growable() (x, y int) {
 func (r *Rect[T]) HandleEvent(event Event, x, y int) {
 	// The base object doesn't handle any events.
 	// This is a no-op.
+}
+
+func (r *Rect[T]) ScrollIntoViewVertical(top, bottom int, child Object[T]) {
+	// The default implementation does nothing.
+	// - Regular containers (e.g. VBox) should adjust to the child offset and
+	//   forward this call to the parent.
+	// - Scroll containers should scroll the element into view.
 }

@@ -157,6 +157,7 @@ type ScrollBox[T pixel.Color] struct {
 	offsetY    int
 	maxOffsetX int
 	maxOffsetY int
+	height     int16
 	lastTouchX int16
 	lastTouchY int16
 }
@@ -189,6 +190,7 @@ func (b *ScrollBox[T]) SetGrowable(horizontal, vertical int) {
 func (b *ScrollBox[T]) Layout(width, height int) {
 	// Allow the child to use its entire MinSize if it wants to (stretching it
 	// to the parent object if needed).
+	b.height = int16(height)
 	minWidth, minHeight := b.child.MinSize()
 	if width < minWidth {
 		b.maxOffsetX = minWidth - width
@@ -252,6 +254,27 @@ func (b *ScrollBox[T]) HandleEvent(event Event, x, y int) {
 
 func (b *ScrollBox[T]) RequestUpdate() {
 	b.child.RequestUpdate()
+}
+
+func (b *ScrollBox[T]) ScrollIntoViewVertical(top, bottom int, child Object[T]) {
+	if top < b.offsetY {
+		// Scroll up if 'top' is above the visible area.
+		b.offsetY = top
+		b.RequestUpdate()
+	} else {
+		// Scroll down if 'bottom' is below the visible area.
+		bottomScrollOffset := bottom - int(b.height)
+		if bottomScrollOffset > b.maxOffsetY {
+			bottomScrollOffset = b.maxOffsetY
+		}
+		if bottomScrollOffset < b.offsetY {
+			bottomScrollOffset = b.offsetY
+		}
+		if bottomScrollOffset != b.offsetY {
+			b.offsetY = bottomScrollOffset
+			b.RequestUpdate()
+		}
+	}
 }
 
 // VerticalScrollBox is a scrollable wrapper of an object that will use hardware
@@ -506,6 +529,30 @@ func (b *VerticalScrollBox[T]) RequestUpdate() {
 		b.bottom.RequestUpdate()
 	}
 	b.child.RequestUpdate()
+}
+
+func (b *VerticalScrollBox[T]) ScrollIntoViewVertical(top, bottom int, child Object[T]) {
+	if child != b.child || b.maxScrollOffset == 0 {
+		return
+	}
+	if top < b.scrollOffset {
+		// Scroll up if 'top' is above the visible area.
+		b.scrollOffset = top
+		b.RequestLayout()
+	} else {
+		// Scroll down if 'bottom' is below the visible area.
+		bottomScrollOffset := bottom - int(b.childHeight)
+		if bottomScrollOffset > b.maxScrollOffset {
+			bottomScrollOffset = b.maxScrollOffset
+		}
+		if bottomScrollOffset < b.scrollOffset {
+			bottomScrollOffset = b.scrollOffset
+		}
+		if bottomScrollOffset != b.scrollOffset {
+			b.scrollOffset = bottomScrollOffset
+			b.RequestLayout()
+		}
+	}
 }
 
 // EventBox wraps an object and handles events for it.
