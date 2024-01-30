@@ -43,7 +43,7 @@ func (theme *Basic[T]) NewListBox(elements []string) *ListBox[T] {
 	for i, text := range elements {
 		child := &children[i]
 		*child = tinygl.MakeText(theme.Font, theme.Foreground, theme.Background, text)
-		child.SetParent(&box.Rect)
+		child.SetParent(box)
 		child.SetAlign(tinygl.AlignLeft)
 	}
 

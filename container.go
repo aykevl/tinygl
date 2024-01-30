@@ -16,7 +16,7 @@ func NewVBox[T pixel.Color](background T, children ...Object[T]) *VBox[T] {
 	box.childHeights = make([]int16, len(children))
 
 	for _, child := range children {
-		child.SetParent(&box.Rect)
+		child.SetParent(box)
 	}
 
 	box.Rect.background = background
@@ -151,6 +151,7 @@ func (b *VBox[T]) HandleEvent(event Event, x, y int) {
 // It is growable and reports a minimal size of (0, 0) to the parent, so that it
 // will take up the remaining space in the parent box.
 type ScrollBox[T pixel.Color] struct {
+	Rect[T]
 	child      Object[T]
 	offsetX    int
 	offsetY    int
@@ -164,9 +165,11 @@ type ScrollBox[T pixel.Color] struct {
 // If you want to scroll multiple children (vertically, for example), you can
 // use a VBox instead.
 func NewScrollBox[T pixel.Color](child Object[T]) *ScrollBox[T] {
-	return &ScrollBox[T]{
+	box := &ScrollBox[T]{
 		child: child,
 	}
+	child.SetParent(box)
+	return box
 }
 
 func (b *ScrollBox[T]) MinSize() (width, height int) {
@@ -237,7 +240,7 @@ func (b *ScrollBox[T]) HandleEvent(event Event, x, y int) {
 			// TODO: use hardware scrolling if available.
 			b.offsetX = offsetX
 			b.offsetY = offsetY
-			b.child.RequestUpdate()
+			b.RequestUpdate()
 		}
 		b.lastTouchX = int16(x)
 		b.lastTouchY = int16(y)
@@ -247,19 +250,8 @@ func (b *ScrollBox[T]) HandleEvent(event Event, x, y int) {
 	}
 }
 
-func (b *ScrollBox[T]) RequestLayout() {
-	// Dummy forwarding call.
-	b.child.RequestLayout()
-}
-
 func (b *ScrollBox[T]) RequestUpdate() {
-	// Dummy forwarding call.
 	b.child.RequestUpdate()
-}
-
-func (b *ScrollBox[T]) SetParent(parent *Rect[T]) {
-	// Dummy forwarding call.
-	b.child.SetParent(parent)
 }
 
 // VerticalScrollBox is a scrollable wrapper of an object that will use hardware
@@ -284,11 +276,19 @@ type VerticalScrollBox[T pixel.Color] struct {
 // If you want to scroll multiple children (vertically, for example), you can
 // use a VBox to wrap these children.
 func NewVerticalScrollBox[T pixel.Color](top, child, bottom Object[T]) *VerticalScrollBox[T] {
-	return &VerticalScrollBox[T]{
+	b := &VerticalScrollBox[T]{
 		top:    top,
 		child:  child,
 		bottom: bottom,
 	}
+	if top != nil {
+		top.SetParent(b)
+	}
+	if bottom != nil {
+		bottom.SetParent(b)
+	}
+	child.SetParent(b)
+	return b
 }
 
 func (b *VerticalScrollBox[T]) MinSize() (width, height int) {

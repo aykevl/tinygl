@@ -31,7 +31,7 @@ type Object[T pixel.Color] interface {
 
 	// Called when adding a child to a parent. Should only ever be called during
 	// the construction of a container object.
-	SetParent(object *Rect[T])
+	SetParent(object Object[T])
 
 	// Minimal width and height of an object.
 	MinSize() (width, height int)
@@ -43,6 +43,9 @@ type Object[T pixel.Color] interface {
 	// SetGrowable sets the grow factor in the horizontal and vertical
 	// direction.
 	SetGrowable(horizontal, vertical int)
+
+	requestChildUpdate()
+	requestChildLayout()
 }
 
 type objectFlag uint8
@@ -54,7 +57,7 @@ const (
 )
 
 type Rect[T pixel.Color] struct {
-	parent     *Rect[T]
+	parent     Object[T]
 	background T
 	flags      objectFlag
 	grow       uint8 // two 4-bit values (0..15), X is the lower 4 bits and Y the upper 4 bits
@@ -69,7 +72,7 @@ func MakeRect[T pixel.Color](background T) Rect[T] {
 	}
 }
 
-func (r *Rect[T]) SetParent(parent *Rect[T]) {
+func (r *Rect[T]) SetParent(parent Object[T]) {
 	if r.parent != nil {
 		panic("SetParent: already set")
 	}
