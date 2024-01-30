@@ -65,7 +65,6 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T], displayX, displayY, display
 	if this, _ := c.NeedsUpdate(); !this { // check the needsUpdate flag
 		return
 	}
-	// needsUpdate flag is cleared
 
 	// Go through all the tiles and update those that changed.
 	drawX0 := x
@@ -89,14 +88,14 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T], displayX, displayY, display
 		}
 		buf := screen.Buffer()
 		maxBlocksPerRow := buf.Len() / (blockSize * blockHeight)
-		for blockX := blockX0; blockX < blockX1; blockX++ {
+		for blockX := blockX0; blockX < blockX1; {
 			// Note: could be sped up by checking whole bytes at a time.
 			if !c.isDirty(blockX, blockY) {
+				blockX++
 				continue
 			}
 			// TODO: combine blocks into a larger rectangle to be drawn at a
 			// single time.
-			c.clearDirty(blockX, blockY)
 
 			// Find other blocks on the same row that could be painted at the
 			// same time.
@@ -108,7 +107,6 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T], displayX, displayY, display
 				if !c.isDirty(blockX+numBlocks, blockY) {
 					break
 				}
-				c.clearDirty(blockX+numBlocks, blockY)
 				numBlocks++
 			}
 
@@ -119,7 +117,17 @@ func (c *Canvas[T]) Update(screen *tinygl.Screen[T], displayX, displayY, display
 				obj.Draw(blockX*blockSize, blockY*blockSize, img)
 			}
 			screen.Send(displayX-x+blockX*blockSize, displayY-y+blockY*blockSize, img)
+			blockX += numBlocks
 		}
+	}
+}
+
+func (c *Canvas[T]) MarkUpdated() {
+	c.Rect.MarkUpdated()
+
+	// Mark all blocks as clean.
+	for i := range c.dirty {
+		c.dirty[i] = 0
 	}
 }
 

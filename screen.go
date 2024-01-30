@@ -107,6 +107,7 @@ func (s *Screen[T]) Update() error {
 	s.Layout()
 	width, height := s.display.Size()
 	s.child.Update(s, 0, 0, int(width), int(height), 0, 0)
+	s.child.MarkUpdated()
 	if s.statPixels != 0 {
 		if showStats {
 			duration := time.Since(start)

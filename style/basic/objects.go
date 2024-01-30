@@ -271,6 +271,15 @@ func (box *ListBox[T]) Update(screen *tinygl.Screen[T], displayX, displayY, disp
 	}
 }
 
+func (box *ListBox[T]) MarkUpdated() {
+	if _, anyChild := box.NeedsUpdate(); anyChild {
+		for i := range box.children {
+			box.children[i].MarkUpdated()
+		}
+	}
+	box.Rect.MarkUpdated()
+}
+
 // Selected returns the index of the currently selected element, or -1 if no
 // element is selected.
 func (box *ListBox[T]) Selected() int {

@@ -59,6 +59,4 @@ func (obj *Image[T]) Update(screen *Screen[T], displayX, displayY, displayWidth,
 		screen.Send(x, y+lineStart, subimg)
 		lineStart += lines
 	}
-
-	obj.flags &^= flagNeedsUpdate
 }

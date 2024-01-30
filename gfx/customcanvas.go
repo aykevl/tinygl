@@ -52,7 +52,6 @@ func (c *CustomCanvas[T]) Update(screen *tinygl.Screen[T], displayX, displayY, d
 		// No update is needed.
 		return
 	}
-	// needsUpdate flag is cleared
 
 	// Update the contents of the canvas.
 	c.update(screen, displayX, displayY, displayWidth, displayHeight, x, y)

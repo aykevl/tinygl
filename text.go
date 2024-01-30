@@ -122,8 +122,6 @@ func (t *Text[T]) Update(screen *Screen[T], displayX, displayY, displayWidth, di
 
 	// Draw text in the center of the provided area.
 	paintText(screen, displayX, displayY, displayWidth, displayHeight, displayX+int(t.textX)-x, displayY+int(t.textY)-y, t.text, t.font, t.background, t.color)
-
-	t.flags &^= flagNeedsUpdate
 }
 
 func paintText[T pixel.Color](screen *Screen[T], x, y, width, height, textX, textY int, text string, f font.Font, background, foreground T) {

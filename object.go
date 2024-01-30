@@ -16,8 +16,8 @@ type Object[T pixel.Color] interface {
 	Layout(width, height int)
 
 	// Update the screen if needed. It recurses into children, if the object has
-	// any. The object will typically mark itself as having finished updating so
-	// another call to Update() won't send any new data to the display.
+	// any. It does not change any state: this is done separately in
+	// MarkUpdated.
 	// The displayX, displayY, displayWidth, and displayHeight parameters are
 	// the area of the display that needs to be updated. The width and height
 	// must never be zero.
@@ -25,6 +25,10 @@ type Object[T pixel.Color] interface {
 	// can be zero or positive. They can be positive when the parent is a scroll
 	// container, for example.
 	Update(screen *Screen[T], displayX, displayY, displayWidth, displayHeight, x, y int)
+
+	// MarkUpdated clears any 'needs update' flags that may be present on this
+	// object, including its children if any.
+	MarkUpdated()
 
 	// Handle some event (usually, touch events).
 	HandleEvent(event Event, x, y int)
@@ -137,8 +141,12 @@ func (r *Rect[T]) NeedsLayout() (needsLayout bool) {
 func (r *Rect[T]) NeedsUpdate() (this, child bool) {
 	this = r.flags&flagNeedsUpdate != 0
 	child = r.flags&flagNeedsChildUpdate != 0
-	r.flags &^= (flagNeedsUpdate | flagNeedsChildUpdate)
 	return this, child
+}
+
+// MarkUpdated clears the 'update' flags for this object.
+func (r *Rect[T]) MarkUpdated() {
+	r.flags &^= (flagNeedsUpdate | flagNeedsChildUpdate)
 }
 
 // SetGrowable sets the grow factor in the horizontal and vertical direction.

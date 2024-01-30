@@ -131,8 +131,15 @@ func (b *VBox[T]) Update(screen *Screen[T], displayX, displayY, displayWidth, di
 	if b.flags&flagNeedsUpdate != 0 && slackHeight > 0 {
 		PaintSolidColor(screen, b.background, displayX, slackTop, displayWidth, slackHeight)
 	}
+}
 
-	b.flags &^= flagNeedsUpdate | flagNeedsChildUpdate // updated, so no need to redraw next time
+func (b *VBox[T]) MarkUpdated() {
+	if _, anyChild := b.NeedsUpdate(); anyChild {
+		for _, child := range b.children {
+			child.MarkUpdated()
+		}
+	}
+	b.Rect.MarkUpdated()
 }
 
 // HandleEvent propagates an event to its children.
@@ -210,6 +217,11 @@ func (b *ScrollBox[T]) Layout(width, height int) {
 func (b *ScrollBox[T]) Update(screen *Screen[T], displayX, displayY, displayWidth, displayHeight, x, y int) {
 	// Redraw the child (if needed) with an offset.
 	b.child.Update(screen, displayX, displayY, displayWidth, displayHeight, x+b.offsetX, y+b.offsetY)
+}
+
+func (b *ScrollBox[T]) MarkUpdated() {
+	b.Rect.MarkUpdated()
+	b.child.MarkUpdated()
 }
 
 func (b *ScrollBox[T]) HandleEvent(event Event, x, y int) {
@@ -453,7 +465,6 @@ func (b *VerticalScrollBox[T]) Update(screen *Screen[T], displayX, displayY, dis
 			updateHeight1 := displayHeight - scrollLine
 			updateHeight2 := newArea - updateHeight1
 			b.child.Update(screen, displayX, displayY+scrollLine, displayWidth, updateHeight1, 0, b.scrollOffset+existingArea)
-			b.child.RequestUpdate()
 			b.child.Update(screen, displayX, displayY, displayWidth, updateHeight2, 0, b.scrollOffset+existingArea+updateHeight1)
 		} else {
 			// The newly exposed area doesn't cross a scroll line, so we can do
@@ -479,7 +490,6 @@ func (b *VerticalScrollBox[T]) Update(screen *Screen[T], displayX, displayY, dis
 			updateHeight1 := displayHeight - scrollLine
 			updateHeight2 := newArea - updateHeight1
 			b.child.Update(screen, displayX, displayY+scrollLine, displayWidth, updateHeight1, 0, b.scrollOffset)
-			b.child.RequestUpdate()
 			b.child.Update(screen, displayX, displayY, displayWidth, updateHeight2, 0, b.scrollOffset+updateHeight1)
 		} else {
 			// The newly exposed area doesn't cross a scroll line, so we can do
@@ -490,8 +500,17 @@ func (b *VerticalScrollBox[T]) Update(screen *Screen[T], displayX, displayY, dis
 		b.child.Update(screen, displayX, displayY, displayWidth, displayHeight, 0, b.scrollOffset)
 	}
 	b.lastScrollOffset = b.scrollOffset
+}
 
-	b.NeedsUpdate() // clear update flag
+func (b *VerticalScrollBox[T]) MarkUpdated() {
+	b.Rect.MarkUpdated()
+	if b.top != nil {
+		b.top.MarkUpdated()
+	}
+	if b.bottom != nil {
+		b.bottom.MarkUpdated()
+	}
+	b.child.MarkUpdated()
 }
 
 func (b *VerticalScrollBox[T]) HandleEvent(event Event, x, y int) {
