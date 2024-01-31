@@ -449,14 +449,30 @@ func (b *VerticalScrollBox[T]) Update(screen *Screen[T], displayX, displayY, dis
 		return
 	}
 
+	// TODO: the code below is way too complex. I'm pretty sure this can be
+	// simplified a great deal, but my head already hurts thinking through the
+	// code as-is.
+
 	// The screen may have been moved, but at least some part is still visible.
 	if b.scrollOffset > b.lastScrollOffset {
 		// Moved up.
-		newArea := b.scrollOffset - b.lastScrollOffset // size of newly exposed area
-		existingArea := int(b.childHeight) - newArea   // size of moved area
+		newArea := b.scrollOffset - b.lastScrollOffset // size of newly exposed area at the bottom
+		existingArea := int(b.childHeight) - newArea   // size of moved area at the top
 
-		// Update the moved part at the top as usual.
-		b.child.Update(screen, displayX, displayY, displayWidth, existingArea, 0, b.scrollOffset)
+		// Update the moved part at the top.
+		line := (int(b.childHeight) - b.scrollOffset) % int(b.childHeight)
+		if line >= existingArea {
+			b.child.Update(screen, displayX, displayY+b.scrollOffset%int(b.childHeight), displayWidth, existingArea, 0, b.scrollOffset)
+		} else {
+			height1 := line
+			height2 := existingArea - line
+			if height1 > 0 {
+				b.child.Update(screen, displayX, displayY+b.scrollOffset%int(b.childHeight), displayWidth, height1, 0, b.scrollOffset)
+			}
+			if height2 > 0 {
+				b.child.Update(screen, displayX, displayY, displayWidth, height2, 0, b.scrollOffset+height1)
+			}
+		}
 
 		// Update the newly exposed area at the bottom, using a bit of a hack:
 		// by requesting an update and then drawing only the newly exposed part.
@@ -477,11 +493,23 @@ func (b *VerticalScrollBox[T]) Update(screen *Screen[T], displayX, displayY, dis
 		}
 	} else if b.scrollOffset < b.lastScrollOffset {
 		// Moved down.
-		newArea := b.lastScrollOffset - b.scrollOffset // size of newly exposed area
-		existingArea := int(b.childHeight) - newArea   // size of moved area
+		newArea := b.lastScrollOffset - b.scrollOffset // size of newly exposed area at the top
+		existingArea := int(b.childHeight) - newArea   // size of moved area at the bottom
 
-		// Update the moved part at the bottom as usual.
-		b.child.Update(screen, displayX, displayY+newArea, displayWidth, existingArea, 0, b.scrollOffset+newArea)
+		// Update the moved part at the bottom.
+		line := (int(b.childHeight) - b.scrollOffset) % int(b.childHeight)
+		if line <= newArea {
+			b.child.Update(screen, displayX, displayY+(b.scrollOffset+newArea)%int(b.childHeight), displayWidth, existingArea, 0, b.scrollOffset+newArea)
+		} else {
+			height1 := line - newArea
+			height2 := existingArea - height1
+			if height1 > 0 {
+				b.child.Update(screen, displayX, displayY+displayHeight-height1, displayWidth, height1, 0, b.scrollOffset+newArea)
+			}
+			if height2 > 0 {
+				b.child.Update(screen, displayX, displayY, displayWidth, height2, 0, b.scrollOffset+newArea+height1)
+			}
+		}
 
 		// Update the newly exposed area at the top, using a bit of a hack:
 		// by requesting an update and then drawing only the newly exposed part.
@@ -501,7 +529,16 @@ func (b *VerticalScrollBox[T]) Update(screen *Screen[T], displayX, displayY, dis
 			b.child.Update(screen, displayX, displayY+scrollLine, displayWidth, newArea, 0, b.scrollOffset)
 		}
 	} else {
-		b.child.Update(screen, displayX, displayY, displayWidth, displayHeight, 0, b.scrollOffset)
+		// No scrolling happened. Update the child if needed.
+		scrollLine := b.scrollOffset % int(b.childHeight)
+		height1 := displayHeight - scrollLine
+		height2 := scrollLine
+		if height1 > 0 {
+			b.child.Update(screen, displayX, displayY+scrollLine, displayWidth, height1, 0, b.scrollOffset)
+		}
+		if height2 > 0 {
+			b.child.Update(screen, displayX, displayY, displayWidth, height2, 0, b.scrollOffset+height1)
+		}
 	}
 	b.lastScrollOffset = b.scrollOffset
 }
