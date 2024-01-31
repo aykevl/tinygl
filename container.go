@@ -395,6 +395,10 @@ func (b *VerticalScrollBox[T]) Layout(width, height int) {
 }
 
 func (b *VerticalScrollBox[T]) Update(screen *Screen[T], displayX, displayY, displayWidth, displayHeight, x, y int) {
+	if b.flags&(flagNeedsUpdate|flagNeedsChildUpdate) == 0 {
+		return
+	}
+
 	// The code below assumes x and y are both 0.
 	if x != 0 || y != 0 {
 		panic("todo: x and y inside VerticalScrollBox")
@@ -526,7 +530,10 @@ func (b *VerticalScrollBox[T]) HandleEvent(event Event, x, y int) {
 		if scrollOffset > b.maxScrollOffset {
 			scrollOffset = b.maxScrollOffset
 		}
-		b.scrollOffset = scrollOffset
+		if scrollOffset != b.scrollOffset {
+			b.scrollOffset = scrollOffset
+			b.Rect.RequestUpdate()
+		}
 		b.lastTouchY = int16(y)
 	case TouchTap:
 		if y < int(b.topHeight) {
@@ -557,7 +564,7 @@ func (b *VerticalScrollBox[T]) ScrollIntoViewVertical(top, bottom int, child Obj
 	if top < b.scrollOffset {
 		// Scroll up if 'top' is above the visible area.
 		b.scrollOffset = top
-		b.RequestLayout()
+		b.Rect.RequestUpdate()
 	} else {
 		// Scroll down if 'bottom' is below the visible area.
 		bottomScrollOffset := bottom - int(b.childHeight)
@@ -569,7 +576,7 @@ func (b *VerticalScrollBox[T]) ScrollIntoViewVertical(top, bottom int, child Obj
 		}
 		if bottomScrollOffset != b.scrollOffset {
 			b.scrollOffset = bottomScrollOffset
-			b.RequestLayout()
+			b.Rect.RequestUpdate()
 		}
 	}
 }
