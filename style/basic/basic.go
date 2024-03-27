@@ -12,14 +12,7 @@ import (
 )
 
 type Basic[T pixel.Color] struct {
-	screen *tinygl.Screen[T]
-
-	// Theme related properties.
-	Font       font.Font
-	Foreground T // text, borders, etc
-	Background T // background
-	Tint       T // highlights (checked boxes, active list element, etc)
-	Scale      style.Scale
+	style.Theme[T]
 }
 
 // NewTheme returns a new basic theme with the given properties.
@@ -52,11 +45,13 @@ func NewTheme[T pixel.Color](scale style.Scale, screen *tinygl.Screen[T]) *Basic
 	}
 
 	return &Basic[T]{
-		screen:     screen,
-		Font:       font,
-		Foreground: pixel.NewColor[T](0, 0, 0),       // black
-		Background: pixel.NewColor[T](255, 255, 255), // white
-		Tint:       pixel.NewColor[T](64, 64, 255),   // light blue
-		Scale:      scale,
+		Theme: style.Theme[T]{
+			Screen:     screen,
+			Font:       font,
+			Foreground: pixel.NewColor[T](0, 0, 0),       // black
+			Background: pixel.NewColor[T](255, 255, 255), // white
+			Tint:       pixel.NewColor[T](64, 64, 255),   // light blue
+			Scale:      scale,
+		},
 	}
 }
