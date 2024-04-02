@@ -1,6 +1,6 @@
 github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 h1:El6M4kTTCOh6aBiKaUGG7oYTSPP8MxqL4YI3kZKwcP4=
 github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510/go.mod h1:pupxD2MaaD3pAXIBCelhxNneeOaAeabZDe5s4K6zSpQ=
-tinygo.org/x/drivers v0.26.1-0.20231124130000-fef6564044f9 h1:7J3vj9E/gGhMCKLZVGiw/7SUnAjHjIOsyMbD0TibpRc=
-tinygo.org/x/drivers v0.26.1-0.20231124130000-fef6564044f9/go.mod h1:X7utcg3yfFUFuKLOMTZD56eztXMjpkcf8OHldfTBsjw=
-tinygo.org/x/tinyfont v0.3.0 h1:HIRLQoI3oc+2CMhPcfv+Ig88EcTImE/5npjqOnMD4lM=
-tinygo.org/x/tinyfont v0.3.0/go.mod h1:+TV5q0KpwSGRWnN+ITijsIhrWYJkoUCp9MYELjKpAXk=
+tinygo.org/x/drivers v0.27.0 h1:TEGk1lQvEhXxfvpEhUu+pwmCnhtldPI+hpHlO9VYixI=
+tinygo.org/x/drivers v0.27.0/go.mod h1:q/mU8G/wz821p8xXqbkBACOlmZFDHXd//DnYnCW+dDQ=
+tinygo.org/x/tinygl-font v0.0.0-20240406210647-1cb0a1c67ca1 h1:GedBeDdu2y1vD3drdfCVlxkOhuSEmGodYxAbG6tX+3k=
+tinygo.org/x/tinygl-font v0.0.0-20240406210647-1cb0a1c67ca1/go.mod h1:9rLR9ZHhhMJRPBOAEwgQoB/hgdHKBwyfj+7rHKYpCyo=

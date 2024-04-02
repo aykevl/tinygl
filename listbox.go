@@ -1,8 +1,8 @@
 package tinygl
 
 import (
-	"github.com/aykevl/tinygl/font"
 	"tinygo.org/x/drivers/pixel"
+	font "tinygo.org/x/tinygl-font"
 )
 
 // A scrollable list of strings, of which one is currently selected.
