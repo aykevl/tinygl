@@ -5,10 +5,10 @@ package basic
 
 import (
 	"github.com/aykevl/tinygl"
-	"github.com/aykevl/tinygl/font"
-	"github.com/aykevl/tinygl/font/roboto"
 	"github.com/aykevl/tinygl/style"
 	"tinygo.org/x/drivers/pixel"
+	font "tinygo.org/x/tinygl-font"
+	"tinygo.org/x/tinygl-font/roboto"
 )
 
 type Basic[T pixel.Color] struct {

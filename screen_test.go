@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/aykevl/tinygl"
-	"github.com/aykevl/tinygl/font/roboto"
 	"tinygo.org/x/drivers"
 	"tinygo.org/x/drivers/pixel"
+	"tinygo.org/x/tinygl-font/roboto"
 )
 
 var flagUpdate = flag.Bool("update", false, "update test outputs")

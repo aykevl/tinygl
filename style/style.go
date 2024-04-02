@@ -2,8 +2,8 @@ package style
 
 import (
 	"github.com/aykevl/tinygl"
-	"github.com/aykevl/tinygl/font"
 	"tinygo.org/x/drivers/pixel"
+	font "tinygo.org/x/tinygl-font"
 )
 
 type Scale uint8
