@@ -10,14 +10,14 @@ import (
 	"tinygo.org/x/tinygl-font/roboto"
 )
 
-type Mono[T pixel.Color] struct {
+type Theme[T pixel.Color] struct {
 	style.Theme[T]
 }
 
-// NewTheme returns a new basic theme with the given properties.
+// New returns a new Mono theme with the given properties.
 //
 // The default style is black text on a white background.
-func NewTheme[T pixel.Color](scale style.Scale, screen *tinygl.Screen[T]) *Mono[T] {
+func New[T pixel.Color](scale style.Scale, screen *tinygl.Screen[T]) *Theme[T] {
 	// Pick a font that is suitable for the given scale.
 	// We can't just pick any size, so we have to use some heuristics.
 	percent := scale.Percent()
@@ -43,7 +43,7 @@ func NewTheme[T pixel.Color](scale style.Scale, screen *tinygl.Screen[T]) *Mono[
 		font = roboto.Regular48
 	}
 
-	return &Mono[T]{
+	return &Theme[T]{
 		Theme: style.Theme[T]{
 			Screen:     screen,
 			Font:       font,
