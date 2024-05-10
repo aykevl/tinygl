@@ -1,6 +1,7 @@
 package image
 
 import (
+	"errors"
 	"unsafe"
 
 	"tinygo.org/x/drivers/pixel"
@@ -29,17 +30,17 @@ type Mono[T pixel.Color] struct {
 // program using "embed":
 //
 //	convert image.png -channel RGB -negate -monochrome -depth 1 MONO:image.raw
-func MakeMono[T pixel.Color](foreground, background T, width, height int, data string) Mono[T] {
+func NewMono[T pixel.Color](foreground, background T, width, height int, data string) (*Mono[T], error) {
 	if len(data) < (width*height+7)/8 {
-		panic("ImageMono: data too short")
+		return nil, errors.New("ImageMono: data too short")
 	}
-	return Mono[T]{
+	return &Mono[T]{
 		data:       unsafe.Pointer(unsafe.StringData(data)),
 		width:      int16(width),
 		height:     int16(height),
 		Foreground: foreground,
 		Background: background,
-	}
+	}, nil
 }
 
 // Size returns the image size of this image.
