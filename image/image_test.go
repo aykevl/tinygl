@@ -75,3 +75,27 @@ func testImage(t *testing.T, img image.Image[pixel.RGB888], reference string) {
 		t.Errorf("mismatch found: %d pixels are different (first diff at (%d, %d), expected %v, actual %v)", mismatch, firstX, firstY, firstExpected, firstActual)
 	}
 }
+
+func TestMono(t *testing.T) {
+	for _, name := range []string{"tinygo-logo-noalpha"} {
+		t.Run(name, func(t *testing.T) {
+			data, err := os.ReadFile("testdata/" + name + ".raw")
+			if err != nil {
+				t.Fatal("could not read input file:", err)
+			}
+			img, e := image.NewMono[pixel.Monochrome](true, false, 299, 255, string(data))
+			if e != nil {
+				t.Fatal("could not decode input file:", e)
+			}
+			if x, y := img.Size(); x != 299 || y != 255 {
+				t.Fatalf("unexpected size: %d, %d", x, y)
+			}
+
+			// Decode the image.
+			buf := pixel.NewImage[pixel.Monochrome](299, 255)
+			img.Draw(buf, 0, 0, 1)
+
+			// TODO: check for data validity
+		})
+	}
+}
