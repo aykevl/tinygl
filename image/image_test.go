@@ -77,25 +77,24 @@ func testImage(t *testing.T, img image.Image[pixel.RGB888], reference string) {
 }
 
 func TestMono(t *testing.T) {
-	for _, name := range []string{"tinygo-logo-noalpha"} {
+	for _, name := range []string{"tinygo-logo-monochrome"} {
 		t.Run(name, func(t *testing.T) {
 			data, err := os.ReadFile("testdata/" + name + ".raw")
 			if err != nil {
 				t.Fatal("could not read input file:", err)
 			}
-			img, e := image.NewMono[pixel.Monochrome](true, false, 299, 255, string(data))
+			fg := pixel.NewRGB888(192, 192, 192)
+			bg := pixel.NewRGB888(32, 32, 32)
+			img, e := image.NewMono(fg, bg, 304, 255, string(data))
 			if e != nil {
 				t.Fatal("could not decode input file:", e)
 			}
-			if x, y := img.Size(); x != 299 || y != 255 {
+			if x, y := img.Size(); x != 304 || y != 255 {
 				t.Fatalf("unexpected size: %d, %d", x, y)
 			}
 
-			// Decode the image.
-			buf := pixel.NewImage[pixel.Monochrome](299, 255)
-			img.Draw(buf, 0, 0, 1)
-
-			// TODO: check for data validity
+			// Test whether the decoded image matches the reference image.
+			testImage(t, img, "testdata/"+name+".png")
 		})
 	}
 }
