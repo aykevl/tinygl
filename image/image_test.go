@@ -77,25 +77,72 @@ func testImage(t *testing.T, img image.Image[pixel.RGB888], reference string) {
 }
 
 func TestMono(t *testing.T) {
-	for _, name := range []string{"tinygo-logo-noalpha"} {
+	for _, name := range []string{"tinygo-logo-monochrome"} {
 		t.Run(name, func(t *testing.T) {
 			data, err := os.ReadFile("testdata/" + name + ".raw")
 			if err != nil {
 				t.Fatal("could not read input file:", err)
 			}
-			img, e := image.NewMono[pixel.Monochrome](true, false, 299, 255, string(data))
+			fg := pixel.NewRGB888(192, 192, 192)
+			bg := pixel.NewRGB888(32, 32, 32)
+			img, e := image.NewMono(fg, bg, 304, 255, string(data))
 			if e != nil {
 				t.Fatal("could not decode input file:", e)
 			}
-			if x, y := img.Size(); x != 299 || y != 255 {
-				t.Fatalf("unexpected size: %d, %d", x, y)
+			width, height := img.Size()
+			if width != 304 || height != 255 {
+				t.Fatalf("unexpected size: %d, %d", width, height)
 			}
 
-			// Decode the image.
-			buf := pixel.NewImage[pixel.Monochrome](299, 255)
-			img.Draw(buf, 0, 0, 1)
-
-			// TODO: check for data validity
+			// Test whether the decoded image matches the reference image.
+			testImage(t, img, "testdata/"+name+".png")
 		})
+	}
+}
+
+// Extra test to make sure decoding the image as pixel.Monochrome works as
+// expected. (It previously didn't due to
+// https://github.com/tinygo-org/drivers/pull/683).
+func TestMonoMonochrome(t *testing.T) {
+	data, err := os.ReadFile("testdata/tinygo-logo-monochrome.raw")
+	if err != nil {
+		t.Fatal("could not read input file:", err)
+	}
+	img, e := image.NewMono[pixel.Monochrome](true, false, 304, 255, string(data))
+	if e != nil {
+		t.Fatal("could not decode input file:", e)
+	}
+
+	// Decode the image.
+	width, height := img.Size()
+	buf := pixel.NewImage[pixel.Monochrome](width, height)
+	img.Draw(buf, 0, 0, 1)
+
+	// Load the reference image.
+	f, err := os.Open("testdata/tinygo-logo-monochrome.png")
+	if err != nil {
+		t.Fatal("could not open reference image:", err)
+	}
+	defer f.Close()
+	golden, err := png.Decode(f)
+	if err != nil {
+		t.Fatal("could not decode reference image:", err)
+	}
+
+	// Check that the decoded image matches the golden image.
+	fg := color.RGBA{192, 192, 192, 255}
+	bg := color.RGBA{32, 32, 32, 255}
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			c1 := bg
+			if buf.Get(x, y) {
+				c1 = fg
+			}
+			r2, g2, b2, _ := golden.At(x, y).RGBA()
+			c2 := color.RGBA{R: uint8(r2 >> 8), G: uint8(g2 >> 8), B: uint8(b2 >> 8), A: 255}
+			if c1 != c2 {
+				t.Fatalf("mismatch at %dx%d: expected %v got %v", x, y, c2, c1)
+			}
+		}
 	}
 }
