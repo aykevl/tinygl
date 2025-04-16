@@ -264,7 +264,7 @@ func (p *polygon) updateBounds() {
 			polygonY2 = ybottom
 		}
 		edgeX1 := edge.xstart
-		edgeX2 := edge.xstart + (ybottom-ytop)*edge.xinc
+		edgeX2 := edge.xstart + (ybottom-ytop)*edge.xinc/4
 		if edgeX1 > edgeX2 {
 			edgeX2, edgeX1 = edgeX1, edgeX2
 		}
