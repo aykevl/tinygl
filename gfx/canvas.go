@@ -160,8 +160,8 @@ func (c *Canvas[T]) setDirty(blockX, blockY int) {
 	c.dirty[blockNum/8] |= (1 << (blockNum % 8))
 }
 
-// markDirty marks all tiles in the given rectangle as dirty.
-func (c *Canvas[T]) markDirty(x, y, width, height int) {
+// MarkDirty marks all tiles in the given rectangle as dirty.
+func (c *Canvas[T]) MarkDirty(x, y, width, height int) {
 	if x < 0 {
 		width -= x
 		x = 0
@@ -218,7 +218,7 @@ func (c *Canvas[T]) Clear() {
 // Add a previously created object to the canvas. An object can't be added more
 // than once.
 func (c *Canvas[T]) Add(object Object[T]) {
-	object.setCanvas(c)
-	object.markDirty()
+	object.SetCanvas(c)
+	object.MarkDirty()
 	c.objects = append(c.objects, object)
 }

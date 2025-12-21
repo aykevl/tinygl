@@ -6,8 +6,8 @@ import (
 
 // Line is a line from a start coordinate to an end coordinate.
 type Line[T pixel.Color] struct {
-	baseObject[T]
-	x2, y2      int16 // x1, y1 are x, y
+	BaseObject[T]
+	X2, Y2      int16 // x1, y1 are x, y
 	strokeWidth int16 // line width in pixels
 	color       T
 	hidden      bool
@@ -22,12 +22,12 @@ type Line[T pixel.Color] struct {
 // property. Lines by default have an ending like SVG stroke-linecap="butt".
 func NewLine[T pixel.Color](color T, x1, y1, x2, y2, strokeWidth int) *Line[T] {
 	line := &Line[T]{
-		baseObject: baseObject[T]{
-			x: int16(x1),
-			y: int16(y1),
+		BaseObject: BaseObject[T]{
+			X: int16(x1),
+			Y: int16(y1),
 		},
-		x2:          int16(x2),
-		y2:          int16(y2),
+		X2:          int16(x2),
+		Y2:          int16(y2),
 		strokeWidth: int16(strokeWidth),
 		color:       color,
 	}
@@ -50,10 +50,10 @@ func (obj *Line[T]) updatePolygon() {
 		return
 	}
 
-	x1 := int(obj.x)
-	y1 := int(obj.y)
-	x2 := int(obj.x2)
-	y2 := int(obj.y2)
+	x1 := int(obj.X)
+	y1 := int(obj.Y)
+	x2 := int(obj.X2)
+	y2 := int(obj.Y2)
 
 	if y1 == y2 {
 		// Straight horizontal line.
@@ -203,10 +203,10 @@ func (obj *Line[T]) Draw(imgX, imgY int, img pixel.Image[T]) {
 		return
 	}
 
-	x1 := int(obj.x) - imgX
-	y1 := int(obj.y) - imgY
-	x2 := int(obj.x2) - imgX
-	y2 := int(obj.y2) - imgY
+	x1 := int(obj.X) - imgX
+	y1 := int(obj.Y) - imgY
+	x2 := int(obj.X2) - imgX
+	y2 := int(obj.Y2) - imgY
 
 	if y1 == y2 {
 		// Fast path: draw horizontal line.
@@ -230,7 +230,7 @@ func (obj *Line[T]) Draw(imgX, imgY int, img pixel.Image[T]) {
 	drawPolygon(&obj.polygon, img, imgX, imgY, obj.color)
 }
 
-func (obj *Line[T]) markDirty() {
+func (obj *Line[T]) MarkDirty() {
 	thickness := int(obj.strokeWidth)
 	if thickness == 0 {
 		// The line is invisible.
@@ -241,24 +241,24 @@ func (obj *Line[T]) markDirty() {
 	// It's possible to optimize this, essentially by running the polygon
 	// filling algorithm algorithm again but at blockSize-sized pixels (the
 	// canvas tile size). But for now, this works.
-	obj.canvas.markDirty(int(obj.polygon.boundX1), int(obj.polygon.boundY1), int(obj.polygon.boundX2-obj.polygon.boundX1), int(obj.polygon.boundY2-obj.polygon.boundY1))
+	obj.Canvas.MarkDirty(int(obj.polygon.boundX1), int(obj.polygon.boundY1), int(obj.polygon.boundX2-obj.polygon.boundX1), int(obj.polygon.boundY2-obj.polygon.boundY1))
 }
 
 // Set the line position (start and end point).
 func (obj *Line[T]) SetPosition(x1, y1, x2, y2 int) {
-	if int(obj.x) == x1 && int(obj.y) == y1 && int(obj.x2) == x2 && int(obj.y2) == y2 {
+	if int(obj.X) == x1 && int(obj.Y) == y1 && int(obj.X2) == x2 && int(obj.Y2) == y2 {
 		return
 	}
 	if !obj.hidden {
-		obj.markDirty()
+		obj.MarkDirty()
 	}
-	obj.x = int16(x1)
-	obj.y = int16(y1)
-	obj.x2 = int16(x2)
-	obj.y2 = int16(y2)
+	obj.X = int16(x1)
+	obj.Y = int16(y1)
+	obj.X2 = int16(x2)
+	obj.Y2 = int16(y2)
 	obj.updatePolygon()
 	if !obj.hidden {
-		obj.markDirty()
+		obj.MarkDirty()
 	}
 }
 
@@ -272,6 +272,6 @@ func (obj *Line[T]) Hidden() bool {
 func (obj *Line[T]) SetHidden(hidden bool) {
 	if obj.hidden != hidden {
 		obj.hidden = hidden
-		obj.markDirty()
+		obj.MarkDirty()
 	}
 }

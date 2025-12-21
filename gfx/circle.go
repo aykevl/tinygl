@@ -4,7 +4,7 @@ import "tinygo.org/x/drivers/pixel"
 
 // Circle is a simple solid color circle.
 type Circle[T pixel.Color] struct {
-	baseObject[T]
+	BaseObject[T]
 	radius int16
 	color  T
 	hidden bool
@@ -20,9 +20,9 @@ type Circle[T pixel.Color] struct {
 // borders are added.
 func NewCircle[T pixel.Color](color T, x, y, radius int) *Circle[T] {
 	return &Circle[T]{
-		baseObject: baseObject[T]{
-			x: int16(x),
-			y: int16(y),
+		BaseObject: BaseObject[T]{
+			X: int16(x),
+			Y: int16(y),
 		},
 		radius: int16(radius),
 		color:  color,
@@ -47,10 +47,10 @@ func (obj *Circle[T]) Draw(imgX, imgY int, img pixel.Image[T]) {
 	// least for whole-screen updates, it doesn't matter as img will usually be
 	// the width of the screen anyway.
 	_, imgHeight := img.Size()
-	if imgY > int(obj.y)+int(obj.radius) {
+	if imgY > int(obj.Y)+int(obj.radius) {
 		return
 	}
-	if imgY+imgHeight < int(obj.y)-int(obj.radius) {
+	if imgY+imgHeight < int(obj.Y)-int(obj.radius) {
 		return
 	}
 
@@ -58,8 +58,8 @@ func (obj *Circle[T]) Draw(imgX, imgY int, img pixel.Image[T]) {
 	// We do this by treating the circle as two halves split horizontally in the
 	// middle. We draw line by line, starting at the middle most lines working
 	// towards the top and the bottom at the same time.
-	x := int(obj.x) - imgX
-	y := int(obj.y) - imgY
+	x := int(obj.X) - imgX
+	y := int(obj.Y) - imgY
 	cx := int(obj.radius) - 1
 	r2 := int(obj.radius) * int(obj.radius) // r²
 	aaCutoff := int(obj.radius) * 2         // why this value??
@@ -122,12 +122,12 @@ func (obj *Circle[T]) Draw(imgX, imgY int, img pixel.Image[T]) {
 	}
 }
 
-func (obj *Circle[T]) markDirty() {
-	x := int(obj.x) - int(obj.radius)
-	y := int(obj.y) - int(obj.radius)
+func (obj *Circle[T]) MarkDirty() {
+	x := int(obj.X) - int(obj.radius)
+	y := int(obj.Y) - int(obj.radius)
 	w := int(obj.radius) * 2
 	h := int(obj.radius) * 2
-	obj.canvas.markDirty(x, y, w, h)
+	obj.Canvas.MarkDirty(x, y, w, h)
 }
 
 // Hidden returns whether this object is currently hidden.
@@ -140,6 +140,6 @@ func (obj *Circle[T]) Hidden() bool {
 func (obj *Circle[T]) SetHidden(hidden bool) {
 	if obj.hidden != hidden {
 		obj.hidden = hidden
-		obj.markDirty()
+		obj.MarkDirty()
 	}
 }
