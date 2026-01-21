@@ -11,7 +11,7 @@ import (
 //
 // For more information, see: https://qoiformat.org/
 type QOI[T pixel.Color] struct {
-	data          string
+	data          []byte
 	width, height int
 	state         qoiDecodeState[T]
 }
@@ -38,6 +38,30 @@ func NewQOI[T pixel.Color](data string) (*QOI[T], error) {
 		return nil, errQOIHeaderTooSmall
 	}
 	if data[:4] != "qoif" {
+		return nil, errQOIInvalidMagic
+	}
+	if data[12] != 3 {
+		// We only support RGB, we don't support the alpha channel (yet!).
+		return nil, errQOIUnsupportedChannelNum
+	}
+	if data[13] != qoiColorSpaceSRGB {
+		// The colorspace affects how a pixel.Color is encoded.
+		return nil, errQOIUnsupportedColorSpace
+	}
+	img := &QOI[T]{
+		data: []byte(data),
+	}
+	img.width = int(uint32(data[4])<<24 | uint32(data[5])<<16 | uint32(data[6])<<8 | uint32(data[7])<<0)
+	img.height = int(uint32(data[8])<<24 | uint32(data[9])<<16 | uint32(data[10])<<8 | uint32(data[11])<<0)
+	img.state.reset()
+	return img, nil
+}
+
+func NewQOIFromBytes[T pixel.Color](data []byte) (*QOI[T], error) {
+	if len(data) < 14 {
+		return nil, errQOIHeaderTooSmall
+	}
+	if string(data[:4]) != "qoif" {
 		return nil, errQOIInvalidMagic
 	}
 	if data[12] != 3 {
